@@ -2,7 +2,7 @@ const JOURNEY_DATA = {
   bahrain: {
     buttonLabel: "Chapter 1 — Bahrain",
     title: "Bahrain",
-    text: "This is my home country, I graduated with an American Diploma in 2020 from the Modern Knowledge Schools of Bahrain.",
+    text: "This is where I graduated high school and built the foundation for my next step.",
     coordinates: [26.145, 50.534],
     bounds: [
       [24.7, 49.6],
