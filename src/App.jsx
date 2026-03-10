@@ -209,149 +209,159 @@ function App() {
           fontFamily:
             'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           color: colors.text,
+          overflowX: "hidden",
         }}
       >
         <div
           style={{
-            minHeight: "calc(100vh - 44px)",
-            border: `1px solid ${colors.border}`,
-            borderRadius: "28px",
-            padding: "28px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "34px",
-            backgroundColor: colors.shellBg,
-            boxShadow: "0 24px 70px rgba(15,23,42,0.06)",
+            transform: "scale(0.92)",
+            transformOrigin: "top center",
+            width: "108.7%",
+            marginLeft: "-4.35%",
           }}
         >
           <div
             style={{
+              minHeight: "calc(100vh - 44px)",
+              border: `1px solid ${colors.border}`,
+              borderRadius: "28px",
+              padding: "28px",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "16px",
-            }}
-          >
-            <div onClick={openJourneyDefault} style={brandStyle}>
-              Basel Hasan
-            </div>
-
-            <button
-              onClick={() => setShowBugModal(true)}
-              style={topRightButtonStyle}
-            >
-              Report Bug
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "240px 1fr",
-              gap: "32px",
-              alignItems: "start",
-              flex: 1,
+              flexDirection: "column",
+              gap: "34px",
+              backgroundColor: colors.shellBg,
+              boxShadow: "0 24px 70px rgba(15,23,42,0.06)",
             }}
           >
             <div
               style={{
                 display: "flex",
-                flexDirection: "column",
-                gap: "14px",
-                paddingTop: "6px",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
               }}
             >
-              <button
-                onClick={() => handleSelectCountry("bahrain")}
-                style={menuButtonStyle(
-                  activeSection === "journey" && selectedPoint === "bahrain"
-                )}
-              >
-                {locations.bahrain.buttonLabel}
-              </button>
+              <div onClick={openJourneyDefault} style={brandStyle}>
+                Basel Hasan
+              </div>
 
               <button
-                onClick={() => handleSelectCountry("germany")}
-                style={menuButtonStyle(
-                  activeSection === "journey" && selectedPoint === "germany"
-                )}
+                onClick={() => setShowBugModal(true)}
+                style={topRightButtonStyle}
               >
-                {locations.germany.buttonLabel}
-              </button>
-
-              {activeSection === "journey" && selectedPoint === "germany" && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                    paddingLeft: "10px",
-                    marginTop: "-2px",
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      setSelectedGermanyPlace("berlin");
-                      resetJourneyView();
-                    }}
-                    style={subButtonStyle(selectedGermanyPlace === "berlin")}
-                  >
-                    Berlin
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedGermanyPlace("frankfurt");
-                      resetJourneyView();
-                    }}
-                    style={subButtonStyle(selectedGermanyPlace === "frankfurt")}
-                  >
-                    Frankfurt
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedGermanyPlace("wildau");
-                      resetJourneyView();
-                    }}
-                    style={subButtonStyle(selectedGermanyPlace === "wildau")}
-                  >
-                    TH Wildau
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={() => setActiveSection("resume")}
-                style={menuButtonStyle(activeSection === "resume")}
-              >
-                Resume
-              </button>
-
-              <button
-                onClick={() => setActiveSection("contact")}
-                style={menuButtonStyle(activeSection === "contact")}
-              >
-                Contact
+                Report Bug
               </button>
             </div>
 
-            {activeSection === "resume" ? (
-              <ResumeView colors={colors} />
-            ) : activeSection === "contact" ? (
-              <ContactView colors={colors} />
-            ) : (
-              <JourneyView
-                key={`${journeyResetKey}-${journeyViewKey}`}
-                selectedPoint={selectedPoint}
-                selectedGermanyPlace={selectedGermanyPlace}
-                locations={locations}
-                handleSelectCountry={handleSelectCountry}
-                colors={colors}
-                worldData={worldData}
-                detailedCountries={detailedCountries}
-              />
-            )}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "240px 1fr",
+                gap: "32px",
+                alignItems: "start",
+                flex: 1,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                  paddingTop: "6px",
+                }}
+              >
+                <button
+                  onClick={() => handleSelectCountry("bahrain")}
+                  style={menuButtonStyle(
+                    activeSection === "journey" && selectedPoint === "bahrain"
+                  )}
+                >
+                  {locations.bahrain.buttonLabel}
+                </button>
+
+                <button
+                  onClick={() => handleSelectCountry("germany")}
+                  style={menuButtonStyle(
+                    activeSection === "journey" && selectedPoint === "germany"
+                  )}
+                >
+                  {locations.germany.buttonLabel}
+                </button>
+
+                {activeSection === "journey" && selectedPoint === "germany" && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      paddingLeft: "10px",
+                      marginTop: "-2px",
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        setSelectedGermanyPlace("berlin");
+                        resetJourneyView();
+                      }}
+                      style={subButtonStyle(selectedGermanyPlace === "berlin")}
+                    >
+                      Berlin
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedGermanyPlace("frankfurt");
+                        resetJourneyView();
+                      }}
+                      style={subButtonStyle(selectedGermanyPlace === "frankfurt")}
+                    >
+                      Frankfurt
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedGermanyPlace("wildau");
+                        resetJourneyView();
+                      }}
+                      style={subButtonStyle(selectedGermanyPlace === "wildau")}
+                    >
+                      TH Wildau
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setActiveSection("resume")}
+                  style={menuButtonStyle(activeSection === "resume")}
+                >
+                  Resume
+                </button>
+
+                <button
+                  onClick={() => setActiveSection("contact")}
+                  style={menuButtonStyle(activeSection === "contact")}
+                >
+                  Contact
+                </button>
+              </div>
+
+              {activeSection === "resume" ? (
+                <ResumeView colors={colors} />
+              ) : activeSection === "contact" ? (
+                <ContactView colors={colors} />
+              ) : (
+                <JourneyView
+                  key={`${journeyResetKey}-${journeyViewKey}`}
+                  selectedPoint={selectedPoint}
+                  selectedGermanyPlace={selectedGermanyPlace}
+                  locations={locations}
+                  handleSelectCountry={handleSelectCountry}
+                  colors={colors}
+                  worldData={worldData}
+                  detailedCountries={detailedCountries}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
