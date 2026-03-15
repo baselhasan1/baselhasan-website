@@ -4,6 +4,7 @@ import {
   GeoJSON,
   MapContainer,
   Pane,
+  Popup,
   Tooltip,
   useMap,
   useMapEvents,
@@ -112,6 +113,29 @@ function getZoomTargetCoordinates({
 
   const target = getCurrentAnchor(selectedPoint, selectedGermanyPlace, locations);
   return target?.coordinates || null;
+}
+
+function getVisibleMarkers(selectedPoint, selectedGermanyPlace, locations) {
+  if (selectedPoint !== "germany") {
+    return locations[selectedPoint]?.cities || [];
+  }
+
+  const baseMarkers = locations.germany?.cities || [];
+  const pois = locations.germany?.pois || {};
+
+  if (selectedGermanyPlace === "berlin") {
+    return [...baseMarkers, ...(pois.berlin || [])];
+  }
+
+  if (selectedGermanyPlace === "frankfurt") {
+    return [...baseMarkers, ...(pois.frankfurt || [])];
+  }
+
+  if (selectedGermanyPlace === "wildau") {
+    return [...baseMarkers, ...(pois.wildau || [])];
+  }
+
+  return [...baseMarkers, ...(pois.overview || [])];
 }
 
 function ChangeMapView({ selectedPoint, selectedGermanyPlace, locations }) {
@@ -657,6 +681,10 @@ function JourneyView({
   const minZoom = 5;
   const maxZoom = 11;
   const activeLocation = locations[selectedPoint];
+  const visibleMarkers = useMemo(
+    () => getVisibleMarkers(selectedPoint, selectedGermanyPlace, locations),
+    [selectedPoint, selectedGermanyPlace, locations]
+  );
 
   useEffect(() => {
     if (!(selectedPoint === "germany" && selectedGermanyPlace === "wildau")) {
@@ -751,7 +779,6 @@ function JourneyView({
     []
   );
 
-  const showCityLabels = currentZoom >= 7;
   const zoomProgress = Math.max(
     0,
     Math.min(1, (currentZoom - minZoom) / (maxZoom - minZoom))
@@ -841,7 +868,7 @@ function JourneyView({
           keyboard={true}
           zoomControl={false}
           attributionControl={false}
-          preferCanvas={true}
+          preferCanvas={false}
           zoomAnimation={false}
           markerZoomAnimation={false}
           fadeAnimation={false}
@@ -956,7 +983,7 @@ function JourneyView({
             )}
 
           <Pane name="cityPane" style={{ zIndex: 550 }}>
-            {activeLocation.cities.map((city) => {
+            {visibleMarkers.map((city) => {
               const isWildau = city.name === "TH Wildau";
               const isWildauActive =
                 isWildau &&
@@ -991,15 +1018,40 @@ function JourneyView({
                           : undefined
                   }
                 >
-                  {showCityLabels && (
-                    <Tooltip
-                      permanent
-                      direction="top"
-                      offset={[0, -10]}
-                      opacity={1}
-                    >
-                      {city.name}
-                    </Tooltip>
+                  <Tooltip direction="top" offset={[0, -10]} opacity={1}>
+                    {city.name}
+                  </Tooltip>
+
+                  {city.description && (
+                    <Popup>
+                      <div
+                        style={{
+                          minWidth: "220px",
+                          fontFamily:
+                            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          color: "#111827",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "16px",
+                            fontWeight: 700,
+                            marginBottom: "6px",
+                          }}
+                        >
+                          {city.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "14px",
+                            color: "#44403c",
+                          }}
+                        >
+                          {city.description}
+                        </div>
+                      </div>
+                    </Popup>
                   )}
                 </CircleMarker>
               );

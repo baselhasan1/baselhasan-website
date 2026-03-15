@@ -300,22 +300,22 @@ function App() {
                   >
                     <button
                       onClick={() => {
-                        setSelectedGermanyPlace("berlin");
-                        resetJourneyView();
-                      }}
-                      style={subButtonStyle(selectedGermanyPlace === "berlin")}
-                    >
-                      Berlin
-                    </button>
-
-                    <button
-                      onClick={() => {
                         setSelectedGermanyPlace("frankfurt");
                         resetJourneyView();
                       }}
                       style={subButtonStyle(selectedGermanyPlace === "frankfurt")}
                     >
                       Frankfurt
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedGermanyPlace("berlin");
+                        resetJourneyView();
+                      }}
+                      style={subButtonStyle(selectedGermanyPlace === "berlin")}
+                    >
+                      Berlin
                     </button>
 
                     <button
