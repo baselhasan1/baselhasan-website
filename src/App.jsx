@@ -3,6 +3,7 @@ import IntroScreen from "./components/IntroScreen.jsx";
 import JourneyView from "./components/JourneyView.jsx";
 import ResumeView from "./components/ResumeView.jsx";
 import ContactView from "./components/ContactView.jsx";
+import AnalyticsView from "./components/AnalyticsView.jsx";
 import BugReportModal from "./components/BugReportModal.jsx";
 import JOURNEY_DATA from "./data/journeyData.js";
 
@@ -343,12 +344,21 @@ function App() {
                 >
                   Contact
                 </button>
+
+                <button
+                  onClick={() => setActiveSection("analytics")}
+                  style={menuButtonStyle(activeSection === "analytics")}
+                >
+                  Analytics
+                </button>
               </div>
 
               {activeSection === "resume" ? (
                 <ResumeView colors={colors} />
               ) : activeSection === "contact" ? (
                 <ContactView colors={colors} />
+              ) : activeSection === "analytics" ? (
+                <AnalyticsView colors={colors} />
               ) : (
                 <JourneyView
                   key={`${journeyResetKey}-${journeyViewKey}`}
