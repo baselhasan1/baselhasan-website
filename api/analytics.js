@@ -1,5 +1,17 @@
 import { google } from "googleapis";
 
+function getDateRange(range) {
+  if (range === "7d") {
+    return { startDate: "7daysAgo", endDate: "today" };
+  }
+
+  if (range === "all") {
+    return { startDate: "2024-01-01", endDate: "today" };
+  }
+
+  return { startDate: "30daysAgo", endDate: "today" };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed." });
@@ -27,6 +39,9 @@ export default async function handler(req, res) {
     });
   }
 
+  const range = req.query?.range || "30d";
+  const dateRange = getDateRange(range);
+
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -44,7 +59,12 @@ export default async function handler(req, res) {
     const response = await analyticsData.properties.runReport({
       property: `properties/${propertyId}`,
       requestBody: {
-        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dateRanges: [
+          {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+          },
+        ],
         metrics: [
           { name: "sessions" },
           { name: "activeUsers" },
@@ -59,6 +79,7 @@ export default async function handler(req, res) {
       visits: Number(metricValues[0]?.value || 0),
       uniqueVisitors: Number(metricValues[1]?.value || 0),
       timeSpentSeconds: Number(metricValues[2]?.value || 0),
+      range,
     });
   } catch (error) {
     console.error("Analytics API error:", error);

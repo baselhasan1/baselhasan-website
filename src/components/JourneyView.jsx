@@ -65,7 +65,11 @@ function getGermanyFocusPoints(locations) {
   const germanyCities = locations?.germany?.cities || [];
 
   return germanyCities.filter((city) =>
-    ["Berlin", "Frankfurt", "TH Wildau"].includes(city.name)
+    [
+      "Berlin",
+      "Frankfurt",
+      "Technical University of Applied Sciences Wildau",
+    ].includes(city.name)
   );
 }
 
@@ -532,7 +536,7 @@ function ResizableWildauPanel({
       >
         <div>
           <div style={{ fontSize: "14px", fontWeight: 700 }}>
-            TH Wildau Campus Map
+            Technical University of Applied Sciences Wildau
           </div>
           <div style={{ fontSize: "12px", color: colors.muted }}>
             Resize from any side or corner
@@ -560,7 +564,7 @@ function ResizableWildauPanel({
       <div style={{ flex: 1, position: "relative" }}>
         <iframe
           src="https://maps.th-wildau.de/"
-          title="TH Wildau Campus Map"
+          title="Technical University of Applied Sciences Wildau map"
           style={{ width: "100%", height: "100%", border: "none" }}
           loading="lazy"
         />
@@ -694,9 +698,10 @@ function JourneyView({
   }, [selectedPoint, selectedGermanyPlace]);
 
   const shouldNeedBerlinOutline =
-    selectedPoint === "germany" &&
-    (selectedGermanyPlace === "berlin" ||
-      (selectedGermanyPlace === "overview" && currentZoom >= 7));
+  selectedPoint === "germany" &&
+  (selectedGermanyPlace === "berlin" ||
+    selectedGermanyPlace === "wildau" ||
+    (selectedGermanyPlace === "overview" && currentZoom >= 7));
 
   const shouldNeedFrankfurtOutline =
     selectedPoint === "germany" &&
@@ -751,34 +756,6 @@ function JourneyView({
     [frankfurtData]
   );
 
-  const wildauCampusOutline = useMemo(
-    () => ({
-      type: "Feature",
-      properties: { name: "TH Wildau Campus" },
-      geometry: {
-        type: "Polygon",
-        coordinates: [[
-          [13.6276, 52.3237],
-          [13.6308, 52.3239],
-          [13.6348, 52.3237],
-          [13.6378, 52.3229],
-          [13.6398, 52.3217],
-          [13.6405, 52.3202],
-          [13.6399, 52.3184],
-          [13.6383, 52.3171],
-          [13.6358, 52.3165],
-          [13.6327, 52.3164],
-          [13.6298, 52.3169],
-          [13.6279, 52.3181],
-          [13.6269, 52.3198],
-          [13.6268, 52.3218],
-          [13.6276, 52.3237],
-        ]],
-      },
-    }),
-    []
-  );
-
   const zoomProgress = Math.max(
     0,
     Math.min(1, (currentZoom - minZoom) / (maxZoom - minZoom))
@@ -797,8 +774,6 @@ function JourneyView({
 
   const getMainHaloRadius = (isActive) =>
     isActive ? 6 + zoomProgress * 4 + pulse * 2 : 4 + zoomProgress * 2;
-
-  const getHotspotRadius = () => 8 + zoomProgress * 12;
 
   const handleWildauHoverStart = () => {
     if (selectedPoint === "germany" && selectedGermanyPlace === "wildau") {
@@ -967,24 +942,11 @@ function JourneyView({
               </Pane>
             )}
 
-          {selectedPoint === "germany" &&
-            selectedGermanyPlace === "wildau" && (
-              <Pane name="wildauOutlinePane" style={{ zIndex: 546 }}>
-                <GeoJSON
-                  data={wildauCampusOutline}
-                  style={() => ({
-                    color: colors.campusOutline,
-                    weight: 1.5,
-                    fillColor: colors.campusFill,
-                    fillOpacity: 1,
-                  })}
-                />
-              </Pane>
-            )}
-
           <Pane name="cityPane" style={{ zIndex: 550 }}>
             {visibleMarkers.map((city) => {
-              const isWildau = city.name === "TH Wildau";
+              const isWildau =
+                city.name ===
+                "Technical University of Applied Sciences Wildau";
               const isWildauActive =
                 isWildau &&
                 selectedPoint === "germany" &&
@@ -1022,11 +984,11 @@ function JourneyView({
                     {city.name}
                   </Tooltip>
 
-                  {city.description && (
+                  {(city.description || city.url) && (
                     <Popup>
                       <div
                         style={{
-                          minWidth: "220px",
+                          minWidth: "240px",
                           fontFamily:
                             'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                           color: "#111827",
@@ -1037,45 +999,49 @@ function JourneyView({
                           style={{
                             fontSize: "16px",
                             fontWeight: 700,
-                            marginBottom: "6px",
+                            marginBottom: city.description ? "6px" : "10px",
                           }}
                         >
                           {city.name}
                         </div>
-                        <div
-                          style={{
-                            fontSize: "14px",
-                            color: "#44403c",
-                          }}
-                        >
-                          {city.description}
-                        </div>
+
+                        {city.description && (
+                          <div
+                            style={{
+                              fontSize: "14px",
+                              color: "#44403c",
+                              marginBottom: city.url ? "12px" : 0,
+                            }}
+                          >
+                            {city.description}
+                          </div>
+                        )}
+
+                        {city.url && (
+                          <a
+                            href={city.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              fontSize: "14px",
+                              fontWeight: 700,
+                              color: "#111827",
+                              textDecoration: "underline",
+                              textUnderlineOffset: "3px",
+                            }}
+                          >
+                            Visit website <span>↗</span>
+                          </a>
+                        )}
                       </div>
                     </Popup>
                   )}
                 </CircleMarker>
               );
             })}
-          </Pane>
-
-          <Pane name="wildauHotspotPane" style={{ zIndex: 610 }}>
-            {selectedPoint === "germany" && selectedGermanyPlace === "wildau" && (
-              <CircleMarker
-                center={[52.3194, 13.6325]}
-                radius={getHotspotRadius()}
-                pathOptions={{
-                  color: colors.campusOutline,
-                  fillColor: colors.campusOutline,
-                  fillOpacity: 0.08,
-                  weight: 2,
-                }}
-                eventHandlers={{
-                  mouseover: handleWildauHoverStart,
-                  mouseout: handleWildauHoverEnd,
-                  click: handleWildauClick,
-                }}
-              />
-            )}
           </Pane>
 
           <Pane name="customMarkerPane" style={{ zIndex: 600 }}>
@@ -1163,7 +1129,7 @@ function JourneyView({
         >
           {selectedPoint === "germany"
             ? selectedGermanyPlace === "wildau"
-              ? "TH Wildau"
+              ? "Technical University of Applied Sciences Wildau"
               : selectedGermanyPlace === "berlin"
                 ? "Berlin"
                 : selectedGermanyPlace === "frankfurt"

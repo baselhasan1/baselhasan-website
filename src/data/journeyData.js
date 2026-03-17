@@ -14,11 +14,16 @@ const JOURNEY_DATA = {
     ],
     cities: [
       { name: "Buri", coordinates: [26.145, 50.534] },
-      { name: "Modern Knowledge Schools", coordinates: [26.206, 50.601] },
+      {
+        name: "Modern Knowledge Schools",
+        coordinates: [26.206, 50.601],
+        url: "https://mks.edu.bh/",
+      },
       {
         name: "Mirai",
         coordinates: [26.215562033867368, 50.59237266757529],
         description: "Mirai is my favorite Japanese restaurant ever.",
+        url: "https://mirairestaurants.com/",
       },
     ],
     countryCodes: ["BHR"],
@@ -39,7 +44,11 @@ const JOURNEY_DATA = {
     ],
     cities: [
       { name: "Berlin", coordinates: [52.52, 13.405] },
-      { name: "TH Wildau", coordinates: [52.3194, 13.6325] },
+      {
+        name: "Technical University of Applied Sciences Wildau",
+        coordinates: [52.3194, 13.6325],
+        url: "https://en.th-wildau.de/",
+      },
       { name: "Frankfurt", coordinates: [50.1109, 8.6821] },
     ],
     pois: {
@@ -50,6 +59,7 @@ const JOURNEY_DATA = {
           coordinates: [52.53312374677974, 13.27990508838696],
           description:
             "This is where I started my learning journey. I completed A1–B1 German at this institute.",
+          url: "https://www.eurasia-institute.com/en/",
         },
       ],
       frankfurt: [
@@ -58,6 +68,7 @@ const JOURNEY_DATA = {
           coordinates: [50.10468946112161, 8.682346656854943],
           description:
             "This is where I gained my first exposure to the German language and built the basis for my studies.",
+          url: "https://www.sprachcaffe-frankfurt.com/",
         },
       ],
       wildau: [],

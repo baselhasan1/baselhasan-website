@@ -1,6 +1,6 @@
 import { memo } from "react";
 
-function ResumeView({ colors }) {
+function ResumeView({ colors, onNavigateToSection }) {
   const sectionTitleStyle = {
     fontSize: "20px",
     fontWeight: 800,
@@ -32,6 +32,23 @@ function ResumeView({ colors }) {
     borderRadius: "8px",
     padding: "56px 56px 48px",
     boxShadow: "0 20px 50px rgba(15,23,42,0.08)",
+  };
+
+  const contactLinkStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    border: `1.5px solid ${colors.subtleBorder}`,
+    background: "#ffffff",
+    color: colors.text,
+    borderRadius: "12px",
+    padding: "9px 12px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
   };
 
   return (
@@ -108,7 +125,13 @@ function ResumeView({ colors }) {
             >
               <section>
                 <div style={sectionTitleStyle}>CONTACT</div>
-                <div style={bodyStyle}>
+                <button
+                  onClick={() => onNavigateToSection?.("contact")}
+                  style={contactLinkStyle}
+                >
+                  Go to contact page <span>›</span>
+                </button>
+                <div style={{ ...bodyStyle, marginTop: "14px" }}>
                   <div>baselkadhem@icloud.com</div>
                   <div>+49 176 72982405</div>
                   <div>15745, Wildau</div>

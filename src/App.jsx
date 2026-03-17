@@ -20,6 +20,12 @@ function App() {
   const [worldData, setWorldData] = useState(null);
   const [detailedCountries, setDetailedCountries] = useState(null);
 
+  const [hoveredMainButton, setHoveredMainButton] = useState(null);
+  const [hoveredSubButton, setHoveredSubButton] = useState(null);
+  const [isBugHovered, setIsBugHovered] = useState(false);
+
+  const [contentVisible, setContentVisible] = useState(true);
+
   const locations = useMemo(() => JOURNEY_DATA, []);
 
   useEffect(() => {
@@ -48,6 +54,13 @@ function App() {
         console.error("Error loading countries-detailed.geojson:", error)
       );
   }, []);
+
+  useEffect(() => {
+    setContentVisible(false);
+    const timer = setTimeout(() => setContentVisible(true), 35);
+
+    return () => clearTimeout(timer);
+  }, [activeSection, selectedPoint, selectedGermanyPlace, journeyViewKey]);
 
   const colors = {
     pageBg: "#f5f5f4",
@@ -106,6 +119,10 @@ function App() {
     resetJourneyView();
   };
 
+  const handleNavigateToSection = useCallback((section) => {
+    setActiveSection(section);
+  }, []);
+
   useEffect(() => {
     if (activeSection !== "journey") return;
     if (selectedPoint !== "germany") return;
@@ -120,41 +137,86 @@ function App() {
     }
   }, [activeSection, selectedPoint, selectedGermanyPlace]);
 
-  const menuButtonStyle = (isActive) => ({
+  const menuButtonStyle = (isActive, isHovered) => ({
+    width: "100%",
     padding: "15px 16px",
     fontSize: "15px",
-    fontWeight: 600,
+    fontWeight: 650,
     letterSpacing: "0.01em",
-    border: `1px solid ${colors.subtleBorder}`,
-    backgroundColor: isActive ? colors.buttonActiveBg : colors.buttonBg,
+    border: `1.5px solid ${
+      isActive ? colors.border : isHovered ? "#a8a29e" : colors.subtleBorder
+    }`,
+    backgroundColor: isActive
+      ? colors.buttonActiveBg
+      : isHovered
+        ? "#f8f7f5"
+        : colors.buttonBg,
     color: colors.text,
     cursor: "pointer",
     borderRadius: "18px",
     textAlign: "left",
-    transition: "all 0.2s ease",
+    transition:
+      "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease",
+    boxShadow: isActive
+      ? "inset 0 1px 2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)"
+      : isHovered
+        ? "0 8px 18px rgba(0,0,0,0.07)"
+        : "0 2px 6px rgba(0,0,0,0.04)",
+    transform: isHovered && !isActive ? "translateY(-1px)" : "translateY(0)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
   });
 
-  const subButtonStyle = (isActive) => ({
+  const subButtonStyle = (isActive, isHovered) => ({
+    width: "100%",
     padding: "11px 14px",
     fontSize: "14px",
-    fontWeight: 600,
-    border: `1px solid ${colors.subtleBorder}`,
-    backgroundColor: isActive ? colors.buttonActiveBg : colors.buttonBg,
+    fontWeight: 650,
+    border: `1.5px solid ${
+      isActive ? colors.border : isHovered ? "#a8a29e" : colors.subtleBorder
+    }`,
+    backgroundColor: isActive
+      ? colors.buttonActiveBg
+      : isHovered
+        ? "#f8f7f5"
+        : colors.buttonBg,
     color: colors.text,
     cursor: "pointer",
     borderRadius: "14px",
     textAlign: "left",
+    transition:
+      "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease",
+    boxShadow: isActive
+      ? "inset 0 1px 2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)"
+      : isHovered
+        ? "0 8px 18px rgba(0,0,0,0.07)"
+        : "0 2px 6px rgba(0,0,0,0.04)",
+    transform: isHovered && !isActive ? "translateY(-1px)" : "translateY(0)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
   });
 
   const topRightButtonStyle = {
     padding: "12px 16px",
     fontSize: "14px",
     fontWeight: 700,
-    border: `1px solid ${colors.subtleBorder}`,
-    backgroundColor: colors.buttonBg,
+    border: `1.5px solid ${
+      isBugHovered ? "#a8a29e" : colors.subtleBorder
+    }`,
+    backgroundColor: isBugHovered ? "#f8f7f5" : colors.buttonBg,
     color: colors.text,
     cursor: "pointer",
     borderRadius: "16px",
+    transition:
+      "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease",
+    boxShadow: isBugHovered
+      ? "0 8px 18px rgba(0,0,0,0.07)"
+      : "0 2px 6px rgba(0,0,0,0.04)",
+    transform: isBugHovered ? "translateY(-1px)" : "translateY(0)",
   };
 
   const brandStyle = {
@@ -162,6 +224,22 @@ function App() {
     fontWeight: 650,
     letterSpacing: "-0.02em",
     cursor: "pointer",
+  };
+
+  const navIndicatorStyle = (isActive) => ({
+    fontSize: "16px",
+    fontWeight: 700,
+    color: isActive ? colors.text : "#a8a29e",
+    opacity: isActive ? 1 : 0.75,
+    flexShrink: 0,
+  });
+
+  const contentTransitionStyle = {
+    opacity: contentVisible ? 1 : 0,
+    transform: contentVisible ? "translateY(0)" : "translateY(10px)",
+    transition: "opacity 220ms ease, transform 220ms ease",
+    willChange: "opacity, transform",
+    minWidth: 0,
   };
 
   if (isMobile) {
@@ -248,6 +326,8 @@ function App() {
 
               <button
                 onClick={() => setShowBugModal(true)}
+                onMouseEnter={() => setIsBugHovered(true)}
+                onMouseLeave={() => setIsBugHovered(false)}
                 style={topRightButtonStyle}
               >
                 Report Bug
@@ -273,20 +353,40 @@ function App() {
               >
                 <button
                   onClick={() => handleSelectCountry("bahrain")}
+                  onMouseEnter={() => setHoveredMainButton("bahrain")}
+                  onMouseLeave={() => setHoveredMainButton(null)}
                   style={menuButtonStyle(
-                    activeSection === "journey" && selectedPoint === "bahrain"
+                    activeSection === "journey" && selectedPoint === "bahrain",
+                    hoveredMainButton === "bahrain"
                   )}
                 >
-                  {locations.bahrain.buttonLabel}
+                  <span>{locations.bahrain.buttonLabel}</span>
+                  <span
+                    style={navIndicatorStyle(
+                      activeSection === "journey" && selectedPoint === "bahrain"
+                    )}
+                  >
+                    ›
+                  </span>
                 </button>
 
                 <button
                   onClick={() => handleSelectCountry("germany")}
+                  onMouseEnter={() => setHoveredMainButton("germany")}
+                  onMouseLeave={() => setHoveredMainButton(null)}
                   style={menuButtonStyle(
-                    activeSection === "journey" && selectedPoint === "germany"
+                    activeSection === "journey" && selectedPoint === "germany",
+                    hoveredMainButton === "germany"
                   )}
                 >
-                  {locations.germany.buttonLabel}
+                  <span>{locations.germany.buttonLabel}</span>
+                  <span
+                    style={navIndicatorStyle(
+                      activeSection === "journey" && selectedPoint === "germany"
+                    )}
+                  >
+                    ›
+                  </span>
                 </button>
 
                 {activeSection === "journey" && selectedPoint === "germany" && (
@@ -304,9 +404,21 @@ function App() {
                         setSelectedGermanyPlace("frankfurt");
                         resetJourneyView();
                       }}
-                      style={subButtonStyle(selectedGermanyPlace === "frankfurt")}
+                      onMouseEnter={() => setHoveredSubButton("frankfurt")}
+                      onMouseLeave={() => setHoveredSubButton(null)}
+                      style={subButtonStyle(
+                        selectedGermanyPlace === "frankfurt",
+                        hoveredSubButton === "frankfurt"
+                      )}
                     >
-                      Frankfurt
+                      <span>Frankfurt</span>
+                      <span
+                        style={navIndicatorStyle(
+                          selectedGermanyPlace === "frankfurt"
+                        )}
+                      >
+                        ›
+                      </span>
                     </button>
 
                     <button
@@ -314,9 +426,21 @@ function App() {
                         setSelectedGermanyPlace("berlin");
                         resetJourneyView();
                       }}
-                      style={subButtonStyle(selectedGermanyPlace === "berlin")}
+                      onMouseEnter={() => setHoveredSubButton("berlin")}
+                      onMouseLeave={() => setHoveredSubButton(null)}
+                      style={subButtonStyle(
+                        selectedGermanyPlace === "berlin",
+                        hoveredSubButton === "berlin"
+                      )}
                     >
-                      Berlin
+                      <span>Berlin</span>
+                      <span
+                        style={navIndicatorStyle(
+                          selectedGermanyPlace === "berlin"
+                        )}
+                      >
+                        ›
+                      </span>
                     </button>
 
                     <button
@@ -324,53 +448,94 @@ function App() {
                         setSelectedGermanyPlace("wildau");
                         resetJourneyView();
                       }}
-                      style={subButtonStyle(selectedGermanyPlace === "wildau")}
+                      onMouseEnter={() => setHoveredSubButton("wildau")}
+                      onMouseLeave={() => setHoveredSubButton(null)}
+                      style={subButtonStyle(
+                        selectedGermanyPlace === "wildau",
+                        hoveredSubButton === "wildau"
+                      )}
                     >
-                      TH Wildau
+                      <span>Technical University of Applied Sciences Wildau</span>
+                      <span
+                        style={navIndicatorStyle(
+                          selectedGermanyPlace === "wildau"
+                        )}
+                      >
+                        ›
+                      </span>
                     </button>
                   </div>
                 )}
 
                 <button
                   onClick={() => setActiveSection("resume")}
-                  style={menuButtonStyle(activeSection === "resume")}
+                  onMouseEnter={() => setHoveredMainButton("resume")}
+                  onMouseLeave={() => setHoveredMainButton(null)}
+                  style={menuButtonStyle(
+                    activeSection === "resume",
+                    hoveredMainButton === "resume"
+                  )}
                 >
-                  Resume
+                  <span>Resume</span>
+                  <span style={navIndicatorStyle(activeSection === "resume")}>
+                    ›
+                  </span>
                 </button>
 
                 <button
                   onClick={() => setActiveSection("contact")}
-                  style={menuButtonStyle(activeSection === "contact")}
+                  onMouseEnter={() => setHoveredMainButton("contact")}
+                  onMouseLeave={() => setHoveredMainButton(null)}
+                  style={menuButtonStyle(
+                    activeSection === "contact",
+                    hoveredMainButton === "contact"
+                  )}
                 >
-                  Contact
+                  <span>Contact</span>
+                  <span style={navIndicatorStyle(activeSection === "contact")}>
+                    ›
+                  </span>
                 </button>
 
                 <button
                   onClick={() => setActiveSection("analytics")}
-                  style={menuButtonStyle(activeSection === "analytics")}
+                  onMouseEnter={() => setHoveredMainButton("analytics")}
+                  onMouseLeave={() => setHoveredMainButton(null)}
+                  style={menuButtonStyle(
+                    activeSection === "analytics",
+                    hoveredMainButton === "analytics"
+                  )}
                 >
-                  Analytics
+                  <span>Analytics</span>
+                  <span style={navIndicatorStyle(activeSection === "analytics")}>
+                    ›
+                  </span>
                 </button>
               </div>
 
-              {activeSection === "resume" ? (
-                <ResumeView colors={colors} />
-              ) : activeSection === "contact" ? (
-                <ContactView colors={colors} />
-              ) : activeSection === "analytics" ? (
-                <AnalyticsView colors={colors} />
-              ) : (
-                <JourneyView
-                  key={`${journeyResetKey}-${journeyViewKey}`}
-                  selectedPoint={selectedPoint}
-                  selectedGermanyPlace={selectedGermanyPlace}
-                  locations={locations}
-                  handleSelectCountry={handleSelectCountry}
-                  colors={colors}
-                  worldData={worldData}
-                  detailedCountries={detailedCountries}
-                />
-              )}
+              <div style={contentTransitionStyle}>
+                {activeSection === "resume" ? (
+                  <ResumeView
+                    colors={colors}
+                    onNavigateToSection={handleNavigateToSection}
+                  />
+                ) : activeSection === "contact" ? (
+                  <ContactView colors={colors} />
+                ) : activeSection === "analytics" ? (
+                  <AnalyticsView colors={colors} />
+                ) : (
+                  <JourneyView
+                    key={`${journeyResetKey}-${journeyViewKey}`}
+                    selectedPoint={selectedPoint}
+                    selectedGermanyPlace={selectedGermanyPlace}
+                    locations={locations}
+                    handleSelectCountry={handleSelectCountry}
+                    colors={colors}
+                    worldData={worldData}
+                    detailedCountries={detailedCountries}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
