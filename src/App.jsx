@@ -293,10 +293,10 @@ function App() {
       >
         <div
           style={{
-            transform: "scale(0.92)",
+            transform: "scale(0.90)",
             transformOrigin: "top center",
-            width: "108.7%",
-            marginLeft: "-4.35%",
+            width: "111.11%",
+            marginLeft: "-5.55%",
           }}
         >
           <div
