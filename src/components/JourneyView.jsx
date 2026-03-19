@@ -1,8 +1,10 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { divIcon } from "leaflet";
 import {
   CircleMarker,
   GeoJSON,
   MapContainer,
+  Marker,
   Pane,
   Popup,
   Tooltip,
@@ -119,27 +121,448 @@ function getZoomTargetCoordinates({
   return target?.coordinates || null;
 }
 
-function getVisibleMarkers(selectedPoint, selectedGermanyPlace, locations) {
-  if (selectedPoint !== "germany") {
-    return locations[selectedPoint]?.cities || [];
+function getVisibleCities(selectedPoint, selectedGermanyPlace, locations) {
+  const cities = locations[selectedPoint]?.cities || [];
+
+  if (selectedPoint === "germany" && selectedGermanyPlace !== "wildau") {
+    return cities.filter(
+      (city) => city.name !== "Technical University of Applied Sciences Wildau"
+    );
   }
 
-  const baseMarkers = locations.germany?.cities || [];
+  return cities;
+}
+
+function getVisiblePois(selectedPoint, selectedGermanyPlace, locations) {
+  if (selectedPoint !== "germany") {
+    return locations[selectedPoint]?.pois || [];
+  }
+
   const pois = locations.germany?.pois || {};
 
   if (selectedGermanyPlace === "berlin") {
-    return [...baseMarkers, ...(pois.berlin || [])];
+    return pois.berlin || [];
   }
 
   if (selectedGermanyPlace === "frankfurt") {
-    return [...baseMarkers, ...(pois.frankfurt || [])];
+    return pois.frankfurt || [];
   }
 
   if (selectedGermanyPlace === "wildau") {
-    return [...baseMarkers, ...(pois.wildau || [])];
+    return pois.wildau || [];
   }
 
-  return [...baseMarkers, ...(pois.overview || [])];
+  return pois.overview || [];
+}
+
+function getCategoryColor(category) {
+  if (category === "restaurant") return "#b45309";
+  if (category === "education") return "#2563eb";
+  if (category === "fun") return "#16a34a";
+  return "#111827";
+}
+
+function getCategoryLabel(category) {
+  if (category === "restaurant") return "Restaurants";
+  if (category === "education") return "Educational institutions";
+  if (category === "fun") return "Fun";
+  return "";
+}
+
+function getCategorySvgMarkup(category, color = "#111827", size = 18) {
+  if (category === "restaurant") {
+    return `
+      <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 3v7" />
+        <path d="M7 3v7" />
+        <path d="M4 7h3" />
+        <path d="M6 10v11" />
+        <path d="M14 3v8" />
+        <path d="M14 11c2.2 0 4-1.8 4-4V3" />
+        <path d="M14 11v10" />
+      </svg>
+    `;
+  }
+
+  if (category === "education") {
+    return `
+      <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 6.5C2 5.7 2.7 5 3.5 5H10c1.2 0 2 .8 2 2v12c0-1.2-.8-2-2-2H3.5C2.7 17 2 17.7 2 18.5V6.5Z" />
+        <path d="M22 6.5C22 5.7 21.3 5 20.5 5H14c-1.2 0-2 .8-2 2v12c0-1.2.8-2 2-2h6.5c.8 0 1.5.7 1.5 1.5V6.5Z" />
+      </svg>
+    `;
+  }
+
+  return `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 9.5h.01" />
+      <path d="M15.5 9.5h.01" />
+      <path d="M8.5 14.5c1 1.5 2.2 2 3.5 2s2.5-.5 3.5-2" />
+    </svg>
+  `;
+}
+
+function createPoiIcon(category) {
+  const color = getCategoryColor(category);
+
+  return divIcon({
+    className: "",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -16],
+    tooltipAnchor: [0, -18],
+    html: `
+      <div
+        style="
+          width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.98);
+          border: 2px solid ${color};
+          box-shadow: 0 8px 18px rgba(0,0,0,0.14);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        ${getCategorySvgMarkup(category, color, 18)}
+      </div>
+    `,
+  });
+}
+
+function CategoryIcon({ category, size = 16, color }) {
+  const stroke = color || getCategoryColor(category);
+
+  if (category === "restaurant") {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M4 3v7" />
+        <path d="M7 3v7" />
+        <path d="M4 7h3" />
+        <path d="M6 10v11" />
+        <path d="M14 3v8" />
+        <path d="M14 11c2.2 0 4-1.8 4-4V3" />
+        <path d="M14 11v10" />
+      </svg>
+    );
+  }
+
+  if (category === "education") {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2 6.5C2 5.7 2.7 5 3.5 5H10c1.2 0 2 .8 2 2v12c0-1.2-.8-2-2-2H3.5C2.7 17 2 17.7 2 18.5V6.5Z" />
+        <path d="M22 6.5C22 5.7 21.3 5 20.5 5H14c-1.2 0-2 .8-2 2v12c0-1.2.8-2 2-2h6.5c.8 0 1.5.7 1.5 1.5V6.5Z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 9.5h.01" />
+      <path d="M15.5 9.5h.01" />
+      <path d="M8.5 14.5c1 1.5 2.2 2 3.5 2s2.5-.5 3.5-2" />
+    </svg>
+  );
+}
+
+function PoiHoverCard({ poi }) {
+  const categoryColor = getCategoryColor(poi.category);
+
+  return (
+    <div
+      style={{
+        minWidth: "220px",
+        maxWidth: "260px",
+        fontFamily:
+          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        color: "#111827",
+        lineHeight: 1.5,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <div
+          style={{
+            width: "28px",
+            height: "28px",
+            borderRadius: "999px",
+            border: `1.5px solid ${categoryColor}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#ffffff",
+            flexShrink: 0,
+          }}
+        >
+          <CategoryIcon category={poi.category} size={15} color={categoryColor} />
+        </div>
+
+        <div>
+          <div style={{ fontSize: "15px", fontWeight: 700 }}>{poi.name}</div>
+          <div
+            style={{
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: categoryColor,
+              fontWeight: 700,
+            }}
+          >
+            {getCategoryLabel(poi.category)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PoiPopupCard({ poi }) {
+  const categoryColor = getCategoryColor(poi.category);
+
+  return (
+    <div
+      style={{
+        minWidth: "240px",
+        fontFamily:
+          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        color: "#111827",
+        lineHeight: 1.6,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          marginBottom: "8px",
+        }}
+      >
+        <div
+          style={{
+            width: "30px",
+            height: "30px",
+            borderRadius: "999px",
+            border: `1.5px solid ${categoryColor}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#ffffff",
+            flexShrink: 0,
+          }}
+        >
+          <CategoryIcon category={poi.category} size={16} color={categoryColor} />
+        </div>
+
+        <div>
+          <div style={{ fontSize: "16px", fontWeight: 700 }}>{poi.name}</div>
+          <div
+            style={{
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: categoryColor,
+              fontWeight: 700,
+            }}
+          >
+            {getCategoryLabel(poi.category)}
+          </div>
+        </div>
+      </div>
+
+      {poi.description && (
+        <div
+          style={{
+            fontSize: "14px",
+            color: "#44403c",
+            marginBottom: poi.url ? "12px" : 0,
+          }}
+        >
+          {poi.description}
+        </div>
+      )}
+
+      {poi.url && (
+        <a
+          href={poi.url}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "14px",
+            fontWeight: 700,
+            color: "#111827",
+            textDecoration: "underline",
+            textUnderlineOffset: "3px",
+          }}
+        >
+          Visit website <span>↗</span>
+        </a>
+      )}
+    </div>
+  );
+}
+
+function CityPopupCard({ city }) {
+  return (
+    <div
+      style={{
+        minWidth: "220px",
+        fontFamily:
+          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        color: "#111827",
+        lineHeight: 1.6,
+      }}
+    >
+      <div
+        style={{
+          fontSize: "16px",
+          fontWeight: 700,
+          marginBottom: city.url ? "10px" : 0,
+        }}
+      >
+        {city.name}
+      </div>
+
+      {city.url && (
+        <a
+          href={city.url}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "14px",
+            fontWeight: 700,
+            color: "#111827",
+            textDecoration: "underline",
+            textUnderlineOffset: "3px",
+          }}
+        >
+          Visit website <span>↗</span>
+        </a>
+      )}
+    </div>
+  );
+}
+
+function MapLegend({ colors }) {
+  const items = [
+    { category: "restaurant", label: "Restaurants" },
+    { category: "education", label: "Educational institutions" },
+    { category: "fun", label: "Fun" },
+  ];
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: "18px",
+        bottom: "18px",
+        zIndex: 1200,
+        background: "rgba(255,255,255,0.96)",
+        border: `1px solid ${colors.subtleBorder}`,
+        borderRadius: "18px",
+        padding: "14px 14px 12px",
+        boxShadow: "0 14px 32px rgba(0,0,0,0.10)",
+        backdropFilter: "blur(8px)",
+        minWidth: "220px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "11px",
+          fontWeight: 700,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: colors.muted,
+          marginBottom: "10px",
+        }}
+      >
+        Legend
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        }}
+      >
+        {items.map((item) => {
+          const color = getCategoryColor(item.category);
+
+          return (
+            <div
+              key={item.category}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                fontSize: "13px",
+                color: "#111827",
+                fontWeight: 600,
+              }}
+            >
+              <div
+                style={{
+                  width: "26px",
+                  height: "26px",
+                  borderRadius: "999px",
+                  border: `1.5px solid ${color}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#ffffff",
+                  flexShrink: 0,
+                }}
+              >
+                <CategoryIcon category={item.category} size={14} color={color} />
+              </div>
+              <span>{item.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function ChangeMapView({ selectedPoint, selectedGermanyPlace, locations }) {
@@ -685,8 +1108,12 @@ function JourneyView({
   const minZoom = 5;
   const maxZoom = 11;
   const activeLocation = locations[selectedPoint];
-  const visibleMarkers = useMemo(
-    () => getVisibleMarkers(selectedPoint, selectedGermanyPlace, locations),
+  const visibleCities = useMemo(
+    () => getVisibleCities(selectedPoint, selectedGermanyPlace, locations),
+    [selectedPoint, selectedGermanyPlace, locations]
+  );
+  const visiblePois = useMemo(
+    () => getVisiblePois(selectedPoint, selectedGermanyPlace, locations),
     [selectedPoint, selectedGermanyPlace, locations]
   );
 
@@ -698,15 +1125,24 @@ function JourneyView({
   }, [selectedPoint, selectedGermanyPlace]);
 
   const shouldNeedBerlinOutline =
-  selectedPoint === "germany" &&
-  (selectedGermanyPlace === "berlin" ||
-    selectedGermanyPlace === "wildau" ||
-    (selectedGermanyPlace === "overview" && currentZoom >= 7));
+    selectedPoint === "germany" &&
+    (selectedGermanyPlace === "berlin" ||
+      selectedGermanyPlace === "wildau" ||
+      (selectedGermanyPlace === "overview" && currentZoom >= 7));
 
   const shouldNeedFrankfurtOutline =
     selectedPoint === "germany" &&
     (selectedGermanyPlace === "frankfurt" ||
       (selectedGermanyPlace === "overview" && currentZoom >= 6));
+
+  const showPois =
+    selectedPoint === "bahrain"
+      ? currentZoom >= 8
+      : selectedGermanyPlace === "berlin" ||
+          selectedGermanyPlace === "frankfurt" ||
+          selectedGermanyPlace === "wildau"
+        ? true
+        : currentZoom >= 11;
 
   useEffect(() => {
     if (!shouldNeedBerlinOutline || berlinLoaded) return;
@@ -943,105 +1379,129 @@ function JourneyView({
             )}
 
           <Pane name="cityPane" style={{ zIndex: 550 }}>
-            {visibleMarkers.map((city) => {
+            {visibleCities.map((city) => {
               const isWildau =
                 city.name ===
                 "Technical University of Applied Sciences Wildau";
-              const isWildauActive =
-                isWildau &&
-                selectedPoint === "germany" &&
-                selectedGermanyPlace === "wildau";
+
+              if (isWildau) {
+                return (
+                  <Marker
+                    key={city.name}
+                    position={city.coordinates}
+                    icon={createPoiIcon("education")}
+                    eventHandlers={{
+                      mouseover: handleWildauHoverStart,
+                      mouseout: handleWildauHoverEnd,
+                      click: handleWildauClick,
+                    }}
+                  >
+                    <Tooltip direction="top" offset={[0, -18]} opacity={1}>
+                      <div
+                        style={{
+                          minWidth: "220px",
+                          fontFamily:
+                            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          color: "#111827",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <div style={{ fontSize: "14px", fontWeight: 700 }}>
+                          {city.name}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: "4px",
+                            fontSize: "11px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                            color: getCategoryColor("education"),
+                            fontWeight: 700,
+                          }}
+                        >
+                          {getCategoryLabel("education")}
+                        </div>
+                      </div>
+                    </Tooltip>
+
+                    {city.url && (
+                      <Popup>
+                        <CityPopupCard city={city} />
+                      </Popup>
+                    )}
+                  </Marker>
+                );
+              }
 
               return (
                 <CircleMarker
                   key={city.name}
                   center={city.coordinates}
-                  radius={getCityRadius(isWildau, isWildauActive)}
+                  radius={getCityRadius(false, false)}
                   pathOptions={{
-                    color: isWildau ? colors.campusOutline : colors.city,
-                    fillColor: isWildau ? colors.campusOutline : colors.city,
+                    color: colors.city,
+                    fillColor: colors.city,
                     fillOpacity: 1,
-                    weight: isWildau ? 2 : 1,
+                    weight: 1,
                   }}
                   eventHandlers={
-                    isWildau
-                      ? {
-                          mouseover: handleWildauHoverStart,
-                          mouseout: handleWildauHoverEnd,
-                          click: handleWildauClick,
-                        }
-                      : city.name === "Berlin"
-                        ? { click: () => handleSelectCountry("germany", "berlin") }
-                        : city.name === "Frankfurt"
-                          ? {
-                              click: () =>
-                                handleSelectCountry("germany", "frankfurt"),
-                            }
-                          : undefined
+                    city.name === "Berlin"
+                      ? { click: () => handleSelectCountry("germany", "berlin") }
+                      : city.name === "Frankfurt"
+                        ? {
+                            click: () =>
+                              handleSelectCountry("germany", "frankfurt"),
+                          }
+                        : undefined
                   }
                 >
                   <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-                    {city.name}
+                    <div
+                      style={{
+                        fontFamily:
+                          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        color: "#111827",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <div style={{ fontSize: "14px", fontWeight: 700 }}>
+                        {city.name}
+                      </div>
+                    </div>
                   </Tooltip>
 
-                  {(city.description || city.url) && (
+                  {city.url && (
                     <Popup>
-                      <div
-                        style={{
-                          minWidth: "240px",
-                          fontFamily:
-                            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                          color: "#111827",
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: 700,
-                            marginBottom: city.description ? "6px" : "10px",
-                          }}
-                        >
-                          {city.name}
-                        </div>
-
-                        {city.description && (
-                          <div
-                            style={{
-                              fontSize: "14px",
-                              color: "#44403c",
-                              marginBottom: city.url ? "12px" : 0,
-                            }}
-                          >
-                            {city.description}
-                          </div>
-                        )}
-
-                        {city.url && (
-                          <a
-                            href={city.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              fontSize: "14px",
-                              fontWeight: 700,
-                              color: "#111827",
-                              textDecoration: "underline",
-                              textUnderlineOffset: "3px",
-                            }}
-                          >
-                            Visit website <span>↗</span>
-                          </a>
-                        )}
-                      </div>
+                      <CityPopupCard city={city} />
                     </Popup>
                   )}
                 </CircleMarker>
               );
             })}
+          </Pane>
+
+          <Pane name="poiPane" style={{ zIndex: 570 }}>
+            {showPois &&
+              visiblePois.map((poi) => (
+                <Marker
+                  key={`${poi.name}-${poi.coordinates[0]}-${poi.coordinates[1]}`}
+                  position={poi.coordinates}
+                  icon={createPoiIcon(poi.category)}
+                >
+                  <Tooltip
+                    direction="top"
+                    offset={[0, -18]}
+                    opacity={1}
+                    sticky
+                  >
+                    <PoiHoverCard poi={poi} />
+                  </Tooltip>
+
+                  <Popup>
+                    <PoiPopupCard poi={poi} />
+                  </Popup>
+                </Marker>
+              ))}
           </Pane>
 
           <Pane name="customMarkerPane" style={{ zIndex: 600 }}>
@@ -1066,7 +1526,22 @@ function JourneyView({
                 fillOpacity: selectedPoint === "bahrain" ? 1 : 0.7,
               }}
               eventHandlers={{ click: () => handleSelectCountry("bahrain") }}
-            />
+            >
+              <Tooltip direction="top" offset={[0, -10]} opacity={1}>
+                <div
+                  style={{
+                    fontFamily:
+                      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: "#111827",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <div style={{ fontSize: "14px", fontWeight: 700 }}>
+                    Manama
+                  </div>
+                </div>
+              </Tooltip>
+            </CircleMarker>
 
             <CircleMarker
               center={locations.germany.coordinates}
@@ -1089,9 +1564,26 @@ function JourneyView({
                 fillOpacity: selectedPoint === "germany" ? 1 : 0.7,
               }}
               eventHandlers={{ click: () => handleSelectCountry("germany") }}
-            />
+            >
+              <Tooltip direction="top" offset={[0, -10]} opacity={1}>
+                <div
+                  style={{
+                    fontFamily:
+                      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: "#111827",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <div style={{ fontSize: "14px", fontWeight: 700 }}>
+                    Berlin
+                  </div>
+                </div>
+              </Tooltip>
+            </CircleMarker>
           </Pane>
         </MapContainer>
+
+        <MapLegend colors={colors} />
 
         {selectedPoint === "germany" &&
           selectedGermanyPlace === "wildau" &&
