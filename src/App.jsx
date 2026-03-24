@@ -23,6 +23,7 @@ function App() {
   const [hoveredMainButton, setHoveredMainButton] = useState(null);
   const [hoveredSubButton, setHoveredSubButton] = useState(null);
   const [isBugHovered, setIsBugHovered] = useState(false);
+  const [isContactHovered, setIsContactHovered] = useState(false);
 
   const [contentVisible, setContentVisible] = useState(true);
 
@@ -123,6 +124,11 @@ function App() {
     setActiveSection(section);
   }, []);
 
+  const handleContactClick = useCallback(() => {
+    window.location.href =
+      "mailto:baselkadhem@icloud.com";
+  }, []);
+
   useEffect(() => {
     if (activeSection !== "journey") return;
     if (selectedPoint !== "germany") return;
@@ -200,24 +206,28 @@ function App() {
     gap: "10px",
   });
 
-  const topRightButtonStyle = {
+  const createTopRightButtonStyle = (isHovered, isPrimary = false) => ({
     padding: "12px 16px",
     fontSize: "14px",
-    fontWeight: 700,
+    fontWeight: isPrimary ? 800 : 700,
     border: `1.5px solid ${
-      isBugHovered ? "#a8a29e" : colors.subtleBorder
+      isPrimary
+        ? colors.border
+        : isHovered
+          ? "#a8a29e"
+          : colors.subtleBorder
     }`,
-    backgroundColor: isBugHovered ? "#f8f7f5" : colors.buttonBg,
+    backgroundColor: isHovered ? "#f8f7f5" : colors.buttonBg,
     color: colors.text,
     cursor: "pointer",
     borderRadius: "16px",
     transition:
       "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease",
-    boxShadow: isBugHovered
+    boxShadow: isHovered
       ? "0 8px 18px rgba(0,0,0,0.07)"
       : "0 2px 6px rgba(0,0,0,0.04)",
-    transform: isBugHovered ? "translateY(-1px)" : "translateY(0)",
-  };
+    transform: isHovered ? "translateY(-1px)" : "translateY(0)",
+  });
 
   const brandStyle = {
     fontSize: "28px",
@@ -324,14 +334,31 @@ function App() {
                 Basel Hasan
               </div>
 
-              <button
-                onClick={() => setShowBugModal(true)}
-                onMouseEnter={() => setIsBugHovered(true)}
-                onMouseLeave={() => setIsBugHovered(false)}
-                style={topRightButtonStyle}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
               >
-                Report Bug
-              </button>
+                <button
+                  onClick={handleContactClick}
+                  onMouseEnter={() => setIsContactHovered(true)}
+                  onMouseLeave={() => setIsContactHovered(false)}
+                  style={createTopRightButtonStyle(isContactHovered, true)}
+                >
+                  Contact Me
+                </button>
+
+                <button
+                  onClick={() => setShowBugModal(true)}
+                  onMouseEnter={() => setIsBugHovered(true)}
+                  onMouseLeave={() => setIsBugHovered(false)}
+                  style={createTopRightButtonStyle(isBugHovered)}
+                >
+                  Report Bug
+                </button>
+              </div>
             </div>
 
             <div
