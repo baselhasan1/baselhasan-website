@@ -1,9 +1,257 @@
+/* Liquid glass. The saturate() is what makes the surface pick up the colour
+   of whatever it floats over — greenery, water, dark satellite imagery —
+   rather than just frosting it grey. */
+:root {
+  --glass-blur: blur(18px) saturate(185%);
+  --glass-bg: rgba(255, 255, 255, 0.52);
+  --glass-bg-panel: rgba(255, 255, 255, 0.68);
+  --glass-bg-hover: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  /* Specular top edge — the detail that reads as a physical pane of glass. */
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  /* Motion: fast start, long soft settle (the same curve as src/utils/motion.js). */
+  --bh-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --bh-ease-in: cubic-bezier(0.55, 0, 0.75, 0.2);
+}
+
 * {
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
+/* --- Glass surfaces ------------------------------------------------------ */
+
+.bh-glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  color: #111827;
+}
+
+/* Anything carrying a paragraph of text takes more white so it stays
+   readable over dark satellite imagery. */
+.bh-glass--panel {
+  background: var(--glass-bg-panel);
+}
+
+.bh-glass--btn {
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    color 0.2s ease;
+}
+
+.bh-glass--btn:hover {
+  background: var(--glass-bg-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.2), var(--glass-highlight);
+}
+
+.bh-glass--btn:active {
+  transform: translateY(0);
+}
+
+.bh-glass--btn.is-active {
+  background: rgba(17, 24, 39, 0.82);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.bh-glass--btn.is-primary {
+  border-color: rgba(17, 24, 39, 0.5);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bh-glass {
+    background: rgba(255, 255, 255, 0.93);
+  }
+  .bh-glass--panel {
+    background: rgba(255, 255, 255, 0.96);
+  }
+}
+
+/* --- Navigation ----------------------------------------------------------
+   A single highlight slides between tabs; App positions it. Tabs sit above it
+   and only change their text colour. */
+
+.bh-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 18px;
+}
+
+.bh-nav-pill {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 0;
+  border-radius: 13px;
+  background: #111827;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bh-nav-pill[data-ready] {
+  transition:
+    transform 0.38s var(--bh-ease-out),
+    width 0.38s var(--bh-ease-out),
+    opacity 0.2s ease;
+}
+
+.bh-nav-item {
+  position: relative;
+  z-index: 1;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: none;
+  border-radius: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  background: transparent;
+  color: #111827;
+  transition:
+    background-color 0.18s ease,
+    color 0.2s ease;
+}
+
+.bh-nav-item:not(.is-active):hover {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.bh-nav-item.is-active {
+  color: #ffffff;
+}
+
+/* Germany's sub-tabs drop in one after another */
+.bh-subtabs > * {
+  animation: bh-rise 0.45s var(--bh-ease-out) backwards;
+}
+
+.bh-subtabs > :nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.bh-subtabs > :nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.bh-subtabs > :nth-child(4) {
+  animation-delay: 120ms;
+}
+
+@keyframes bh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* --- Intro ---------------------------------------------------------------- */
+
+.bh-intro[data-state="leaving"] {
+  pointer-events: none;
+  animation: bh-intro-out 0.4s ease both;
+}
+
+@keyframes bh-intro-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* --- Section panels -----------------------------------------------------
+   Enter and exit are a matched pair; App keeps the panel mounted for the
+   exit (PANEL_EXIT_MS). */
+
+.bh-overlay {
+  position: absolute;
+  top: 92px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px 28px;
+  background: rgba(28, 25, 23, 0.28);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: bh-overlay-in 0.2s ease backwards;
+}
+
+.bh-panel {
+  width: min(100%, 1060px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+  animation: bh-panel-in 0.38s var(--bh-ease-out) backwards;
+}
+
+.bh-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Closing: the map is usable again immediately, while the panel leaves. */
+.bh-overlay[data-state="closing"] {
+  pointer-events: none;
+  animation: bh-overlay-out 0.18s ease both;
+}
+
+.bh-overlay[data-state="closing"] .bh-panel {
+  animation: bh-panel-out 0.18s var(--bh-ease-in) both;
+}
+
+@keyframes bh-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes bh-overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes bh-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+}
+
+@keyframes bh-panel-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+
+/* Lenis owns wheel smoothing inside panels; native smooth scrolling on top
+   of it would double-ease. */
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
 }
 
 body {
@@ -20,4 +268,287 @@ a {
 
 button {
   font: inherit;
+}
+
+/* ==========================================================================
+   Map styling
+   Leaflet renders its own DOM, so these bits have to live in CSS rather
+   than in the inline styles used everywhere else.
+   ========================================================================== */
+
+/* Ground colour behind the imagery. A tile that hasn't arrived yet shows this,
+   and a dark ground reads far less like a "broken square" than a pale one. */
+.bh-map,
+.bh-map .leaflet-container {
+  background: #3a3f42;
+}
+
+/* Main "you are here" marker ---------------------------------------------- */
+.bh-pin-wrap {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.bh-pin {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #111827;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+  transition: transform 0.18s ease;
+}
+
+.bh-pin-wrap:hover .bh-pin {
+  transform: scale(1.12);
+}
+
+.bh-pin-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid #111827;
+  animation: bh-halo 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bh-halo {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* Secondary city dots ------------------------------------------------------ */
+.bh-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2.5px solid #57534e;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.2);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.bh-dot:hover {
+  transform: scale(1.3);
+  border-color: #111827;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.28);
+}
+
+.bh-dot--clickable {
+  cursor: pointer;
+}
+
+/* POI badges --------------------------------------------------------------- */
+.bh-poi {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.bh-poi:hover {
+  transform: scale(1.12);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.22);
+}
+
+/* Permanent labels on the main markers -------------------------------------
+   Borderless so they read as map typography rather than as a tooltip. */
+.leaflet-tooltip.bh-label {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #111827;
+  text-shadow:
+    0 1px 0 #ffffff,
+    0 0 4px #ffffff,
+    0 0 8px #ffffff;
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.bh-label::before {
+  display: none;
+}
+
+/* Leaflet scales marker DOM during animated zooms. Hiding text for the short
+   transform prevents blurred/stretched labels; they return at the final scale. */
+.leaflet-container.bh-map-zooming .leaflet-tooltip-pane {
+  opacity: 0;
+}
+
+.leaflet-tooltip-pane {
+  transition: opacity 90ms ease;
+}
+
+/* Place names. The marker is a zero-size anchor, so the text centres on it and
+   keeps one size on screen at every zoom. Only which names are rendered
+   changes as you zoom, never how any of them looks. */
+.bh-place-label {
+  pointer-events: none;
+}
+
+.bh-place-label span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.7),
+    0 0 14px rgba(15, 23, 42, 0.45);
+}
+
+.bh-place-label--country span {
+  font-size: 13px;
+  letter-spacing: 0.36em;
+  text-indent: 0.36em;
+  text-transform: uppercase;
+}
+
+.bh-place-label--city span {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  text-transform: uppercase;
+}
+
+.bh-place-label--district span {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.bh-map-error {
+  position: absolute;
+  left: 50%;
+  top: 92px;
+  z-index: 1250;
+  transform: translateX(-50%);
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(127, 29, 29, 0.9);
+  color: #fff;
+  font: 600 13px/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.bh-map-loading,
+.bh-map-provider {
+  position: absolute;
+  left: 50%;
+  top: 92px;
+  z-index: 1240;
+  transform: translateX(-50%);
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.78);
+  color: #fff;
+  font: 600 13px/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.bh-map-provider {
+  cursor: pointer;
+}
+
+/* The Manama-to-Berlin arc, drawn only while the map flies between chapters */
+.bh-arc {
+  animation:
+    bh-arc-dash 2.4s linear infinite,
+    bh-arc-in 0.5s ease-out;
+}
+
+@keyframes bh-arc-dash {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+@keyframes bh-arc-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Attribution — required by Esri for the imagery, kept quiet -------------- */
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px 0 0 0;
+  padding: 3px 8px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  color: #78716c;
+}
+
+.leaflet-container .leaflet-control-attribution a {
+  color: #57534e;
+  text-decoration: underline;
+}
+
+
+.leaflet-tooltip.ubahn-tip {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 12.5px;
+  border-radius: 10px;
+  border: 1px solid #e7e5e4;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  padding: 6px 10px;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.ubahn-tip b {
+  display: inline-block;
+  margin-right: 2px;
+}
+
+.bh-live-dot {
+  animation: bh-live-blink 2s ease-in-out infinite;
+}
+
+@keyframes bh-live-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bh-pin-halo,
+  .bh-arc,
+  .bh-live-dot {
+    animation: none;
+  }
+  .bh-intro,
+  .bh-subtabs > *,
+  .bh-overlay,
+  .bh-overlay .bh-panel {
+    animation: none !important;
+  }
+  .bh-nav-pill[data-ready] {
+    transition: none;
+  }
 }

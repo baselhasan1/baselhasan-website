@@ -58,11 +58,12 @@ function ContactView() {
   return (
     <div
       style={{
-        minHeight: "700px",
+        minHeight: "520px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "0",
+        padding: "48px 32px",
+        background: "#fcfcfb",
       }}
     >
       <div

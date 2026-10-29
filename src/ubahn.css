@@ -1,0 +1,237 @@
+/* Live Berlin U-Bahn layer ------------------------------------------------
+   Rails, stations and trains are drawn on canvases (see BerlinUbahnLayer.jsx);
+   the styles here cover the DOM pieces: the hover card and the status panel. */
+
+.ubahn-canvas {
+  pointer-events: none;
+}
+
+/* Leaflet scales the canvas during an animated zoom; the trains are redrawn
+   crisp the moment it settles, so they simply hold still and stay put. */
+.ubahn-canvas--trains {
+  transition: opacity 120ms ease;
+}
+
+.ubahn-canvas--trains.is-zooming {
+  opacity: 0;
+}
+
+/* --- hover / tap card ----------------------------------------------------- */
+
+.ubahn-card {
+  position: absolute;
+  z-index: 1300;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 14px));
+  min-width: 150px;
+  max-width: 240px;
+  padding: 8px 11px 9px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 10px 26px rgba(15, 23, 42, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  color: #111827;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 12.5px;
+  line-height: 1.35;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.ubahn-card.is-visible {
+  opacity: 1;
+}
+
+.ubahn-card::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.ubahn-card__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+}
+
+.ubahn-card__head span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ubahn-card__meta {
+  margin-top: 3px;
+  color: #57534e;
+  font-size: 11.5px;
+}
+
+.ubahn-card__meta b {
+  color: #1c1917;
+  font-weight: 600;
+}
+
+/* --- line badge (shared by card and panel) -------------------------------- */
+
+.ubahn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* --- status panel --------------------------------------------------------- */
+
+.ubahn-panel {
+  position: absolute;
+  right: 24px;
+  bottom: 140px;
+  z-index: 1200;
+  width: 236px;
+  padding: 12px 14px 11px;
+  border-radius: 18px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.ubahn-panel__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 18px;
+}
+
+.ubahn-panel__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #16a34a;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+}
+
+.ubahn-panel__dot.is-error {
+  background: #b45309;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.18);
+}
+
+.ubahn-panel__dot.is-loading {
+  background: #a8a29e;
+  box-shadow: none;
+}
+
+.ubahn-panel__count {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.ubahn-panel__count small {
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+.ubahn-panel__lines {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.ubahn-panel__line {
+  position: relative;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  font: 800 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.ubahn-panel__line:hover {
+  transform: translateY(-1px);
+}
+
+.ubahn-panel__line.is-off {
+  background: transparent !important;
+  color: #a8a29e !important;
+  box-shadow: inset 0 0 0 1.5px rgba(168, 162, 158, 0.6);
+}
+
+.ubahn-panel__line.is-off:hover {
+  color: #57534e !important;
+}
+
+.ubahn-panel__line.is-quiet {
+  opacity: 0.85;
+}
+
+.ubahn-panel__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #78716c;
+}
+
+.ubahn-panel__foot span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ubahn-panel__foot button {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font: 700 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: #57534e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ubahn-panel__foot button:hover {
+  color: #111827;
+}
+
+@media (max-width: 640px) {
+  .ubahn-panel {
+    right: 12px;
+    bottom: 120px;
+    width: 212px;
+  }
+}

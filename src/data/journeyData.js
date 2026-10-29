@@ -2,6 +2,7 @@ const JOURNEY_DATA = {
   bahrain: {
     buttonLabel: "Chapter 1 — Bahrain",
     title: "Bahrain",
+    markerLabel: "Manama",
     text: "My home country is a peaceful little island with a lot to offer. It is where I graduated from Modern Knowledge Schools in 2020 with an American Diploma.",
     coordinates: [26.145, 50.534],
     bounds: [
@@ -44,6 +45,7 @@ const JOURNEY_DATA = {
   germany: {
     buttonLabel: "Chapter 2 — Germany",
     title: "Germany",
+    markerLabel: "Berlin",
     text: "Studying in Germany had always been part of my plan. I was always inspired by its engineering excellence and design.",
     coordinates: [52.52, 13.405],
     bounds: [

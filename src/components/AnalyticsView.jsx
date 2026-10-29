@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 function formatNumber(value) {
   return new Intl.NumberFormat().format(value || 0);
@@ -18,11 +18,12 @@ function formatDuration(totalSeconds) {
 
 function useAnimatedValue(target, duration = 900) {
   const [displayValue, setDisplayValue] = useState(0);
+  const displayValueRef = useRef(0);
 
   useEffect(() => {
     let frameId;
     let startTime = null;
-    const startValue = displayValue;
+    const startValue = displayValueRef.current;
     const endValue = Number(target || 0);
 
     const step = (timestamp) => {
@@ -35,6 +36,7 @@ function useAnimatedValue(target, duration = 900) {
       );
 
       setDisplayValue(nextValue);
+      displayValueRef.current = nextValue;
 
       if (progress < 1) {
         frameId = window.requestAnimationFrame(step);
@@ -46,7 +48,7 @@ function useAnimatedValue(target, duration = 900) {
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [target]);
+  }, [target, duration]);
 
   return displayValue;
 }
@@ -200,40 +202,14 @@ function AnalyticsView({ colors }) {
   return (
     <div
       style={{
-        border: `1px solid ${colors.border}`,
-        borderRadius: "36px",
-        minHeight: "700px",
-        background: colors.card,
-        padding: "26px",
+        minHeight: "460px",
+        background: "#fcfcfb",
+        padding: "36px 32px",
         display: "flex",
         flexDirection: "column",
-        gap: "20px",
+        justifyContent: "center",
       }}
     >
-      <div
-        style={{
-          fontSize: "12px",
-          letterSpacing: "0.16em",
-          textTransform: "uppercase",
-          color: colors.muted,
-          fontWeight: 600,
-        }}
-      >
-        Analytics
-      </div>
-
-      <div
-        style={{
-          borderRadius: "30px",
-          border: `1px solid ${colors.subtleBorder}`,
-          minHeight: "520px",
-          background: "#fcfcfb",
-          padding: "32px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-        }}
-      >
         {loading ? (
           <div
             style={{
@@ -382,7 +358,6 @@ function AnalyticsView({ colors }) {
             />
           </div>
         )}
-      </div>
     </div>
   );
 }

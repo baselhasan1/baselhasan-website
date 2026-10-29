@@ -7,18 +7,27 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "test:e2e": "playwright test",
+    "test:api": "node --test tests/api-ubahn.test.js",
+    "test:e2e:install": "playwright install chromium",
+    "check:performance": "node scripts/check-performance-budget.mjs",
+    "verify": "npm run lint && npm run test:api && npm run build && npm run check:performance",
+    "preview": "vite preview",
+    "prepare-geo": "node scripts/prepare-geo.mjs",
+    "fetch-ubahn": "node scripts/fetch-ubahn.mjs"
   },
   "dependencies": {
-    "@turf/turf": "^7.3.4",
     "googleapis": "^171.4.0",
     "leaflet": "^1.9.4",
+    "lenis": "^1.3.26",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.62.1",
+    "@turf/turf": "^7.3.4",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",

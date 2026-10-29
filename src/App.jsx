@@ -1,256 +1,225 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import IntroScreen from "./components/IntroScreen.jsx";
-import JourneyView from "./components/JourneyView.jsx";
-import ResumeView from "./components/ResumeView.jsx";
-import ContactView from "./components/ContactView.jsx";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AnalyticsView from "./components/AnalyticsView.jsx";
 import BugReportModal from "./components/BugReportModal.jsx";
+import ContactView from "./components/ContactView.jsx";
+import IntroScreen from "./components/IntroScreen.jsx";
+import JourneyView from "./components/JourneyView.jsx";
+import OverlayPanel from "./components/OverlayPanel.jsx";
+import ResumeView from "./components/ResumeView.jsx";
 import JOURNEY_DATA from "./data/journeyData.js";
+import { loadGeoJson } from "./utils/loadGeoJson.js";
+import { usePresence } from "./utils/motion.js";
+
+const FONT_STACK =
+  'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+const GERMANY_PLACES = [
+  { id: "overview", label: "Overview" },
+  { id: "frankfurt", label: "Frankfurt" },
+  { id: "berlin", label: "Berlin" },
+  { id: "wildau", label: "TH Wildau" },
+];
+
+const PANEL_TITLES = {
+  resume: "Resume",
+  contact: "Contact",
+  analytics: "Analytics",
+};
+
+// Matches the .bh-overlay closing animation in index.css.
+const PANEL_EXIT_MS = 180;
+
+const COLORS = {
+  pageBg: "#f5f5f4",
+  shellBg: "#fafaf9",
+  text: "#111827",
+  muted: "#78716c",
+  card: "#ffffff",
+  border: "#111827",
+  subtleBorder: "#d6d3d1",
+  marker: "#111827",
+  buttonBg: "#ffffff",
+  buttonActiveBg: "#e7e5e4",
+};
+
+// The section panels are bundled in rather than lazy-loaded. Together they
+// are ~6 KiB gzip, and lazy() cost far more than that in feel: React holds a
+// suspended view back for ~300 ms before revealing it, so every first open
+// showed "Loading…" and then popped.
 
 function App() {
   const [showIntro, setShowIntro] = useState(true);
-  const [activeSection, setActiveSection] = useState("journey");
   const [selectedPoint, setSelectedPoint] = useState("bahrain");
   const [selectedGermanyPlace, setSelectedGermanyPlace] = useState("overview");
-  const [journeyResetKey, setJourneyResetKey] = useState(0);
-  const [journeyViewKey, setJourneyViewKey] = useState(0);
+  const [openPanel, setOpenPanel] = useState(null);
   const [showBugModal, setShowBugModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const [worldData, setWorldData] = useState(null);
-  const [detailedCountries, setDetailedCountries] = useState(null);
+  const [focusCountries, setFocusCountries] = useState(null);
+  const [mapDataError, setMapDataError] = useState(null);
 
-  const [hoveredMainButton, setHoveredMainButton] = useState(null);
-  const [hoveredSubButton, setHoveredSubButton] = useState(null);
-  const [isBugHovered, setIsBugHovered] = useState(false);
-  const [isContactHovered, setIsContactHovered] = useState(false);
+  const [shownPanel, isPanelClosing] = usePresence(openPanel, PANEL_EXIT_MS);
 
-  const [contentVisible, setContentVisible] = useState(true);
+  const navRef = useRef(null);
+  const navPillRef = useRef(null);
 
   const locations = useMemo(() => JOURNEY_DATA, []);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
 
     checkMobile();
     window.addEventListener("resize", checkMobile);
 
-    return () => {
-      window.removeEventListener("resize", checkMobile);
-    };
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Starts while the intro is still typing, so the map is ready the moment it
+  // clears rather than only beginning to load then.
   useEffect(() => {
-    fetch("/world.geojson")
-      .then((response) => response.json())
-      .then((data) => setWorldData(data))
-      .catch((error) => console.error("Error loading world.geojson:", error));
+    if (isMobile) return undefined;
 
-    fetch("/countries-detailed.geojson")
-      .then((response) => response.json())
-      .then((data) => setDetailedCountries(data))
-      .catch((error) =>
-        console.error("Error loading countries-detailed.geojson:", error)
-      );
-  }, []);
+    const controller = new AbortController();
+    loadGeoJson("geo/focus-countries.geojson", { signal: controller.signal })
+      .then((data) => {
+        setFocusCountries(data);
+        setMapDataError(null);
+      })
+      .catch((error) => {
+        if (error.name === "AbortError") return;
+        console.error("Error loading focus-countries.geojson:", error);
+        setMapDataError("The map outline could not be loaded.");
+      });
 
-  useEffect(() => {
-    setContentVisible(false);
-    const timer = setTimeout(() => setContentVisible(true), 35);
+    return () => controller.abort();
+  }, [isMobile]);
 
-    return () => clearTimeout(timer);
-  }, [activeSection, selectedPoint, selectedGermanyPlace, journeyViewKey]);
+  const colors = COLORS;
 
-  const colors = {
-    pageBg: "#f5f5f4",
-    shellBg: "#fafaf9",
-    text: "#111827",
-    muted: "#78716c",
-    card: "#ffffff",
-    softCard: "#fafaf9",
-    border: "#111827",
-    subtleBorder: "#d6d3d1",
-    mapBg: "#fcfcfb",
-    worldStroke: "#d6d3d1",
-    worldFill: "#f5f5f4",
-    inactiveCountryStroke: "#d6d3d1",
-    activeCountryStroke: "#44403c",
-    inactiveCountryFill: "#f0efec",
-    activeCountryFill: "#d6d3d1",
-    city: "#57534e",
-    marker: "#111827",
-    markerHalo: "#292524",
-    buttonBg: "#ffffff",
-    buttonActiveBg: "#e7e5e4",
-    infoBorder: "#e7e5e4",
-    outline: "#374151",
-    outlineFill: "rgba(55,65,81,0.03)",
-    campusOutline: "#2563eb",
-    campusFill: "rgba(37,99,235,0.08)",
-  };
+  const handleIntroFinish = useCallback(() => setShowIntro(false), []);
 
-  const handleIntroFinish = useCallback(() => {
-    setShowIntro(false);
-  }, []);
-
-  const resetJourneyView = useCallback(() => {
-    setJourneyViewKey((prev) => prev + 1);
+  const handleSelectCountry = useCallback((country, germanyPlaceOverride = null) => {
+    setOpenPanel(null);
+    setSelectedPoint(country);
+    setSelectedGermanyPlace(
+      country === "germany" ? germanyPlaceOverride || "overview" : "overview"
+    );
   }, []);
 
   const openJourneyDefault = useCallback(() => {
-    setActiveSection("journey");
+    setOpenPanel(null);
     setSelectedPoint("bahrain");
     setSelectedGermanyPlace("overview");
-    setJourneyResetKey((prev) => prev + 1);
-    setJourneyViewKey((prev) => prev + 1);
-  }, []);
-
-  const handleSelectCountry = (country, germanyPlaceOverride = null) => {
-    setActiveSection("journey");
-    setSelectedPoint(country);
-
-    if (country === "germany") {
-      setSelectedGermanyPlace(germanyPlaceOverride || "overview");
-    } else {
-      setSelectedGermanyPlace("overview");
-    }
-
-    resetJourneyView();
-  };
-
-  const handleNavigateToSection = useCallback((section) => {
-    setActiveSection(section);
   }, []);
 
   const handleContactClick = useCallback(() => {
-    window.location.href =
-      "mailto:baselkadhem@icloud.com";
+    window.location.href = "mailto:baselkadhem@icloud.com";
   }, []);
 
   useEffect(() => {
-    if (activeSection !== "journey") return;
-    if (selectedPoint !== "germany") return;
+    if (!openPanel) return undefined;
 
-    if (
-      selectedGermanyPlace !== "overview" &&
-      selectedGermanyPlace !== "berlin" &&
-      selectedGermanyPlace !== "frankfurt" &&
-      selectedGermanyPlace !== "wildau"
-    ) {
-      setSelectedGermanyPlace("overview");
-    }
-  }, [activeSection, selectedPoint, selectedGermanyPlace]);
+    const onKey = (event) => {
+      if (event.key === "Escape") setOpenPanel(null);
+    };
 
-  const menuButtonStyle = (isActive, isHovered) => ({
-    width: "100%",
-    padding: "15px 16px",
-    fontSize: "15px",
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openPanel]);
+
+  /* --- floating chrome styles ------------------------------------------ */
+
+  // Glass surfaces get their background, border and shadow from the .bh-glass
+  // class — setting those inline here would paint over the blur.
+  const subChipStyle = {
+    padding: "8px 14px",
+    fontSize: "13px",
     fontWeight: 650,
-    letterSpacing: "0.01em",
-    border: `1.5px solid ${
-      isActive ? colors.border : isHovered ? "#a8a29e" : colors.subtleBorder
-    }`,
-    backgroundColor: isActive
-      ? colors.buttonActiveBg
-      : isHovered
-        ? "#f8f7f5"
-        : colors.buttonBg,
-    color: colors.text,
+    borderRadius: "999px",
     cursor: "pointer",
-    borderRadius: "18px",
-    textAlign: "left",
-    transition:
-      "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease",
-    boxShadow: isActive
-      ? "inset 0 1px 2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)"
-      : isHovered
-        ? "0 8px 18px rgba(0,0,0,0.07)"
-        : "0 2px 6px rgba(0,0,0,0.04)",
-    transform: isHovered && !isActive ? "translateY(-1px)" : "translateY(0)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
-  });
+    whiteSpace: "nowrap",
+  };
 
-  const subButtonStyle = (isActive, isHovered) => ({
-    width: "100%",
-    padding: "11px 14px",
-    fontSize: "14px",
-    fontWeight: 650,
-    border: `1.5px solid ${
-      isActive ? colors.border : isHovered ? "#a8a29e" : colors.subtleBorder
-    }`,
-    backgroundColor: isActive
-      ? colors.buttonActiveBg
-      : isHovered
-        ? "#f8f7f5"
-        : colors.buttonBg,
-    color: colors.text,
-    cursor: "pointer",
-    borderRadius: "14px",
-    textAlign: "left",
-    transition:
-      "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease",
-    boxShadow: isActive
-      ? "inset 0 1px 2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)"
-      : isHovered
-        ? "0 8px 18px rgba(0,0,0,0.07)"
-        : "0 2px 6px rgba(0,0,0,0.04)",
-    transform: isHovered && !isActive ? "translateY(-1px)" : "translateY(0)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "10px",
-  });
-
-  const createTopRightButtonStyle = (isHovered, isPrimary = false) => ({
-    padding: "12px 16px",
-    fontSize: "14px",
+  const actionButtonStyle = (isPrimary = false) => ({
+    padding: "11px 16px",
+    fontSize: "13.5px",
     fontWeight: isPrimary ? 800 : 700,
-    border: `1.5px solid ${
-      isPrimary
-        ? colors.border
-        : isHovered
-          ? "#a8a29e"
-          : colors.subtleBorder
-    }`,
-    backgroundColor: isHovered ? "#f8f7f5" : colors.buttonBg,
-    color: colors.text,
+    borderRadius: "14px",
     cursor: "pointer",
-    borderRadius: "16px",
-    transition:
-      "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease",
-    boxShadow: isHovered
-      ? "0 8px 18px rgba(0,0,0,0.07)"
-      : "0 2px 6px rgba(0,0,0,0.04)",
-    transform: isHovered ? "translateY(-1px)" : "translateY(0)",
+    whiteSpace: "nowrap",
   });
 
-  const brandStyle = {
-    fontSize: "28px",
-    fontWeight: 650,
-    letterSpacing: "-0.02em",
-    cursor: "pointer",
-  };
+  const onJourney = openPanel === null;
 
-  const navIndicatorStyle = (isActive) => ({
-    fontSize: "16px",
-    fontWeight: 700,
-    color: isActive ? colors.text : "#a8a29e",
-    opacity: isActive ? 1 : 0.75,
-    flexShrink: 0,
-  });
+  const navItems = [
+    {
+      id: "bahrain",
+      label: "Bahrain",
+      isActive: onJourney && selectedPoint === "bahrain",
+      onClick: () => handleSelectCountry("bahrain"),
+    },
+    {
+      id: "germany",
+      label: "Germany",
+      isActive: onJourney && selectedPoint === "germany",
+      onClick: () => handleSelectCountry("germany"),
+    },
+    {
+      id: "resume",
+      label: "Resume",
+      isActive: openPanel === "resume",
+      onClick: () => setOpenPanel("resume"),
+    },
+    {
+      id: "contact",
+      label: "Contact",
+      isActive: openPanel === "contact",
+      onClick: () => setOpenPanel("contact"),
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
+      isActive: openPanel === "analytics",
+      onClick: () => setOpenPanel("analytics"),
+    },
+  ];
 
-  const contentTransitionStyle = {
-    opacity: contentVisible ? 1 : 0,
-    transform: contentVisible ? "translateY(0)" : "translateY(10px)",
-    transition: "opacity 220ms ease, transform 220ms ease",
-    willChange: "opacity, transform",
-    minWidth: 0,
-  };
+  const activeNavId = navItems.find((item) => item.isActive)?.id ?? null;
+
+  // One highlight that slides between tabs instead of each tab painting its
+  // own. Positioned imperatively so a tab change costs no extra render.
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const pill = navPillRef.current;
+    if (!nav || !pill) return undefined;
+
+    const place = () => {
+      const button = activeNavId && nav.querySelector(`[data-nav-id="${activeNavId}"]`);
+      if (!button) {
+        pill.style.opacity = "0";
+        return;
+      }
+      pill.style.opacity = "1";
+      pill.style.width = `${button.offsetWidth}px`;
+      pill.style.transform = `translateX(${button.offsetLeft}px)`;
+    };
+
+    place();
+    // Only animate moves after the first placement, so it doesn't fly in from
+    // the left edge on load.
+    const frame = requestAnimationFrame(() => {
+      pill.dataset.ready = "true";
+    });
+
+    // Web fonts arriving change tab widths.
+    const observer = new ResizeObserver(place);
+    observer.observe(nav);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [activeNavId, isMobile]);
 
   if (isMobile) {
     return (
@@ -265,8 +234,7 @@ function App() {
           padding: "32px",
           boxSizing: "border-box",
           textAlign: "center",
-          fontFamily:
-            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          fontFamily: FONT_STACK,
           color: "#111827",
         }}
       >
@@ -284,296 +252,157 @@ function App() {
     );
   }
 
-  if (showIntro) {
-    return <IntroScreen onFinish={handleIntroFinish} />;
-  }
-
   return (
-    <>
-      <div
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        overflow: "hidden",
+        backgroundColor: colors.pageBg,
+        fontFamily: FONT_STACK,
+        color: colors.text,
+      }}
+    >
+      <JourneyView
+        selectedPoint={selectedPoint}
+        selectedGermanyPlace={selectedGermanyPlace}
+        locations={locations}
+        handleSelectCountry={handleSelectCountry}
+        colors={colors}
+        focusCountries={focusCountries}
+        mapDataError={mapDataError}
+        isActive={!openPanel}
+      />
+
+      {/* Floating chrome. The bar itself ignores pointer events so the map
+          stays draggable everywhere between the controls. */}
+      <header
         style={{
-          minHeight: "100vh",
-          backgroundColor: colors.pageBg,
-          padding: "22px",
-          fontFamily:
-            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          color: colors.text,
-          overflowX: "hidden",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1500,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "20px",
+          padding: "20px 24px",
+          pointerEvents: "none",
         }}
       >
-        <div
-          style={{
-            transform: "scale(0.90)",
-            transformOrigin: "top center",
-            width: "111.11%",
-            marginLeft: "-5.55%",
-          }}
-        >
-          <div
+        <div style={{ flex: 1, display: "flex", justifyContent: "flex-start" }}>
+          <button
+            onClick={openJourneyDefault}
+            className="bh-glass bh-glass--btn"
             style={{
-              minHeight: "calc(100vh - 44px)",
-              border: `1px solid ${colors.border}`,
-              borderRadius: "28px",
-              padding: "28px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "34px",
-              backgroundColor: colors.shellBg,
-              boxShadow: "0 24px 70px rgba(15,23,42,0.06)",
+              pointerEvents: "auto",
+              padding: "11px 18px",
+              borderRadius: "16px",
+              fontSize: "18px",
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              cursor: "pointer",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "16px",
-              }}
-            >
-              <div onClick={openJourneyDefault} style={brandStyle}>
-                Basel Hasan
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                }}
-              >
-                <button
-                  onClick={handleContactClick}
-                  onMouseEnter={() => setIsContactHovered(true)}
-                  onMouseLeave={() => setIsContactHovered(false)}
-                  style={createTopRightButtonStyle(isContactHovered, true)}
-                >
-                  Contact Me
-                </button>
-
-                <button
-                  onClick={() => setShowBugModal(true)}
-                  onMouseEnter={() => setIsBugHovered(true)}
-                  onMouseLeave={() => setIsBugHovered(false)}
-                  style={createTopRightButtonStyle(isBugHovered)}
-                >
-                  Report Bug
-                </button>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "240px 1fr",
-                gap: "32px",
-                alignItems: "start",
-                flex: 1,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
-                  paddingTop: "6px",
-                }}
-              >
-                <button
-                  onClick={() => handleSelectCountry("bahrain")}
-                  onMouseEnter={() => setHoveredMainButton("bahrain")}
-                  onMouseLeave={() => setHoveredMainButton(null)}
-                  style={menuButtonStyle(
-                    activeSection === "journey" && selectedPoint === "bahrain",
-                    hoveredMainButton === "bahrain"
-                  )}
-                >
-                  <span>{locations.bahrain.buttonLabel}</span>
-                  <span
-                    style={navIndicatorStyle(
-                      activeSection === "journey" && selectedPoint === "bahrain"
-                    )}
-                  >
-                    ›
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => handleSelectCountry("germany")}
-                  onMouseEnter={() => setHoveredMainButton("germany")}
-                  onMouseLeave={() => setHoveredMainButton(null)}
-                  style={menuButtonStyle(
-                    activeSection === "journey" && selectedPoint === "germany",
-                    hoveredMainButton === "germany"
-                  )}
-                >
-                  <span>{locations.germany.buttonLabel}</span>
-                  <span
-                    style={navIndicatorStyle(
-                      activeSection === "journey" && selectedPoint === "germany"
-                    )}
-                  >
-                    ›
-                  </span>
-                </button>
-
-                {activeSection === "journey" && selectedPoint === "germany" && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "10px",
-                      paddingLeft: "10px",
-                      marginTop: "-2px",
-                    }}
-                  >
-                    <button
-                      onClick={() => {
-                        setSelectedGermanyPlace("frankfurt");
-                        resetJourneyView();
-                      }}
-                      onMouseEnter={() => setHoveredSubButton("frankfurt")}
-                      onMouseLeave={() => setHoveredSubButton(null)}
-                      style={subButtonStyle(
-                        selectedGermanyPlace === "frankfurt",
-                        hoveredSubButton === "frankfurt"
-                      )}
-                    >
-                      <span>Frankfurt</span>
-                      <span
-                        style={navIndicatorStyle(
-                          selectedGermanyPlace === "frankfurt"
-                        )}
-                      >
-                        ›
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setSelectedGermanyPlace("berlin");
-                        resetJourneyView();
-                      }}
-                      onMouseEnter={() => setHoveredSubButton("berlin")}
-                      onMouseLeave={() => setHoveredSubButton(null)}
-                      style={subButtonStyle(
-                        selectedGermanyPlace === "berlin",
-                        hoveredSubButton === "berlin"
-                      )}
-                    >
-                      <span>Berlin</span>
-                      <span
-                        style={navIndicatorStyle(
-                          selectedGermanyPlace === "berlin"
-                        )}
-                      >
-                        ›
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setSelectedGermanyPlace("wildau");
-                        resetJourneyView();
-                      }}
-                      onMouseEnter={() => setHoveredSubButton("wildau")}
-                      onMouseLeave={() => setHoveredSubButton(null)}
-                      style={subButtonStyle(
-                        selectedGermanyPlace === "wildau",
-                        hoveredSubButton === "wildau"
-                      )}
-                    >
-                      <span>Technical University of Applied Sciences Wildau</span>
-                      <span
-                        style={navIndicatorStyle(
-                          selectedGermanyPlace === "wildau"
-                        )}
-                      >
-                        ›
-                      </span>
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setActiveSection("resume")}
-                  onMouseEnter={() => setHoveredMainButton("resume")}
-                  onMouseLeave={() => setHoveredMainButton(null)}
-                  style={menuButtonStyle(
-                    activeSection === "resume",
-                    hoveredMainButton === "resume"
-                  )}
-                >
-                  <span>Resume</span>
-                  <span style={navIndicatorStyle(activeSection === "resume")}>
-                    ›
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setActiveSection("contact")}
-                  onMouseEnter={() => setHoveredMainButton("contact")}
-                  onMouseLeave={() => setHoveredMainButton(null)}
-                  style={menuButtonStyle(
-                    activeSection === "contact",
-                    hoveredMainButton === "contact"
-                  )}
-                >
-                  <span>Contact</span>
-                  <span style={navIndicatorStyle(activeSection === "contact")}>
-                    ›
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setActiveSection("analytics")}
-                  onMouseEnter={() => setHoveredMainButton("analytics")}
-                  onMouseLeave={() => setHoveredMainButton(null)}
-                  style={menuButtonStyle(
-                    activeSection === "analytics",
-                    hoveredMainButton === "analytics"
-                  )}
-                >
-                  <span>Analytics</span>
-                  <span style={navIndicatorStyle(activeSection === "analytics")}>
-                    ›
-                  </span>
-                </button>
-              </div>
-
-              <div style={contentTransitionStyle}>
-                {activeSection === "resume" ? (
-                  <ResumeView
-                    colors={colors}
-                    onNavigateToSection={handleNavigateToSection}
-                  />
-                ) : activeSection === "contact" ? (
-                  <ContactView colors={colors} />
-                ) : activeSection === "analytics" ? (
-                  <AnalyticsView colors={colors} />
-                ) : (
-                  <JourneyView
-                    key={`${journeyResetKey}-${journeyViewKey}`}
-                    selectedPoint={selectedPoint}
-                    selectedGermanyPlace={selectedGermanyPlace}
-                    locations={locations}
-                    handleSelectCountry={handleSelectCountry}
-                    colors={colors}
-                    worldData={worldData}
-                    detailedCountries={detailedCountries}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
+            Basel Hasan
+          </button>
         </div>
-      </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "10px",
+            pointerEvents: "auto",
+          }}
+        >
+          <nav ref={navRef} className="bh-glass bh-nav">
+            <span ref={navPillRef} className="bh-nav-pill" aria-hidden="true" />
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                data-nav-id={item.id}
+                onClick={item.onClick}
+                className={`bh-nav-item ${item.isActive ? "is-active" : ""}`}
+                aria-current={item.isActive ? "page" : undefined}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          {onJourney && selectedPoint === "germany" && (
+            <div
+              className="bh-subtabs"
+              style={{ display: "flex", gap: "8px", justifyContent: "center" }}
+            >
+              {GERMANY_PLACES.map((place) => (
+                <button
+                  key={place.id}
+                  onClick={() => setSelectedGermanyPlace(place.id)}
+                  className={`bh-glass bh-glass--btn ${
+                    selectedGermanyPlace === place.id ? "is-active" : ""
+                  }`}
+                  style={subChipStyle}
+                >
+                  {place.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "flex-start",
+            gap: "10px",
+            pointerEvents: "auto",
+          }}
+        >
+          <button
+            onClick={handleContactClick}
+            className="bh-glass bh-glass--btn is-primary"
+            style={actionButtonStyle(true)}
+          >
+            Contact Me
+          </button>
+
+          <button
+            onClick={() => setShowBugModal(true)}
+            className="bh-glass bh-glass--btn"
+            style={actionButtonStyle()}
+          >
+            Report Bug
+          </button>
+        </div>
+      </header>
+
+      {shownPanel && (
+        <OverlayPanel
+          title={PANEL_TITLES[shownPanel]}
+          colors={colors}
+          isClosing={isPanelClosing}
+          onClose={() => setOpenPanel(null)}
+        >
+          {shownPanel === "resume" && <ResumeView colors={colors} />}
+          {shownPanel === "contact" && <ContactView colors={colors} />}
+          {shownPanel === "analytics" && <AnalyticsView colors={colors} />}
+        </OverlayPanel>
+      )}
 
       <BugReportModal
         isOpen={showBugModal}
         onClose={() => setShowBugModal(false)}
         colors={colors}
       />
-    </>
+
+      {/* The site loads underneath while this plays. */}
+      {showIntro && <IntroScreen onFinish={handleIntroFinish} />}
+    </div>
   );
 }
 

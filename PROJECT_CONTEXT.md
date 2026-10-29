@@ -1,5 +1,8 @@
 # PROJECT_CONTEXT.md
 
+> **Next Claude session: read "Latest work and decisions" at the bottom first.** It
+> records what was built most recently, the decisions the owner made, and what not to touch.
+
 ## Project Overview
 This project is a **desktop-first personal portfolio website** for **Basel Hasan**.
 
@@ -70,11 +73,10 @@ The project emphasizes a **clean, minimal, professional** visual style with subt
   - contains map locations, city data, POIs, descriptions, links, etc.
 
 ### Public / Static Data
-Likely includes:
-- `public/world.geojson`
-- `public/countries-detailed.geojson`
-- `public/berlin_bezirke.geojson`
-- `public/frankfurt.geojson`
+- `public/geo/` holds the trimmed GeoJSON the site loads (focus countries, Berlin outline,
+  Berlin U-Bahn network). It is produced by `npm run prepare-geo` / `npm run fetch-ubahn`.
+- `raw-geo/` holds the original large GeoJSON sources (moved out of `public/` so they
+  are no longer shipped).
 - favicon / logo assets
 
 ---
@@ -247,3 +249,92 @@ Typical commands used:
 git add .
 git commit -m "Your message"
 git push
+```
+
+---
+
+## Latest work and decisions (updated 2026-10-29)
+
+### Ground rules for the next session
+- **The Berlin U-Bahn map is the owner's prized work. Never rewrite, reset or "clean up"
+  it without asking.** Files: `api/ubahn.js`, `src/components/BerlinUbahnLayer.jsx`,
+  `src/components/UbahnPanel.jsx`, `src/ubahn.css`, `src/data/ubahnLines.js`,
+  `src/data/ubahnStops.js`, `src/data/bvgFeed.js`, `src/data/vbbFeed.js`,
+  `public/geo/berlin-ubahn.geojson`, `scripts/fetch-ubahn.mjs`,
+  `scripts/bake-ubahn-stops.mjs`.
+- Ask the owner before design or architecture decisions; present options with a
+  recommendation. Don't commit or push unless asked.
+- Desktop only. Initial JS budget is 150 KiB gzip (currently 122.4 KiB); check with
+  `npm run verify` (lint + API tests + build + budget).
+- The owner's main browser is **Firefox** (2560x1440 @ 144 Hz, RTX 5070). Test
+  smoothness there. Firefox had hardware acceleration switched off, which caused the
+  "15 fps" complaint; it is now on.
+
+### Known test state
+- `npm run test:e2e`: 3 of 4 tests in `tests/map.spec.js` were already failing before
+  this work (map chapters, satellite fallback, BVG fallback — lines ~28, ~49, ~65).
+  They are pre-existing, not caused by the motion/map changes. 1 passes.
+- The chapter test now checks `aria-current="page"` on the Bahrain / Germany buttons
+  (the "Chapter" text it used to look for was removed).
+
+### Motion and page speed (`src/utils/motion.js`, `App.jsx`, `OverlayPanel.jsx`, `IntroScreen.jsx`, `index.css`)
+- Inspired by landonorris.com (analysed with REA): hover prefetch, sliding nav pill,
+  panel enter/exit via `usePresence`, staggered reveal, Lenis smooth scroll inside
+  panels. No GSAP.
+- The intro no longer blocks the site; panels are bundled directly (no lazy chunks).
+- Chapter flights: 1.3 s for country hops, 0.8 s for city hops.
+
+### Map zoom: "smooth and instant", then "guide my hand"
+- **Decision: tune Leaflet, not rewrite to MapLibre GL.** (MapLibre was offered and
+  declined — it would mean rewriting JourneyView and porting the U-Bahn layer.)
+- `src/utils/smoothWheelZoom.js` replaces Leaflet's wheel zoom (`scrollWheelZoom={false}`
+  on MapContainer, mounted by `SmoothWheelZoomHandler` in JourneyView). It moves the
+  camera every frame, then settles on a half-level step. Tunables at the top of the file:
+
+  | Constant | Value | Meaning |
+  |---|---|---|
+  | `PX_PER_LEVEL` | 200 | one wheel notch = half a zoom level (owner said full speed was too fast) |
+  | `PINCH_PX_PER_LEVEL` | 120 | trackpad pinch |
+  | `FOLLOW_MS` | 90 | zoom easing |
+  | `SETTLE_MS` / `SETTLE_STEP` / `SETTLE_FORWARD_AT` | 110 / 0.5 / 0.3 | resting step logic |
+  | `MAGNET_REACH` | 0.45 | pin magnet reach, share of the map's shorter side (~400 px) |
+  | `MAGNET_STRENGTH` | 0.65 | share of the pin–pointer gap one gesture closes |
+  | `MAGNET_FOLLOW_MS` | 160 | magnet easing |
+
+- **Pin magnet** ("like someone guiding your hand", not a jolt): zooming in drifts the
+  nearest interactive marker toward the pointer. Falloff `1 - (d/reach)^4`, zoom-in only.
+  Place labels and U-Bahn stations are *not* magnets (adding stations was offered, not done).
+- MapContainer uses `zoomSnap={0.5}`; chapter framing goes through `frameBounds()` in
+  JourneyView, which floors to whole levels so flights land exactly as before.
+- Satellite tiles are sharded over `server.arcgisonline.com` and
+  `services.arcgisonline.com` (identical tiles), with preconnects in `index.html`.
+
+### Removed UI
+- The bottom-left "Chapter story" glass box (Chapter 1/2, title, paragraph) was removed
+  at the owner's request, with its CSS. The city paragraphs still live in
+  `src/data/journeyData.js` if they are ever wanted elsewhere.
+
+### 144 Hz work (`src/utils/tileLayer.js`, `src/utils/leafletPatches.js`)
+- `BufferedTileLayer`: O(n) `_pruneTiles`, fade loop that skips finished tiles, no forced
+  reflow in `_updateLevels`, async image decode before fade-in, `_tileReady` guard,
+  faster `_noTilesToLoad`.
+- **Flight mode**: `ChangeMapView` fires `bhflightstart` before `flyTo` and `bhflightend`
+  at 75 % of the flight (`SHARP_RESUME_AT`). During a flight the sharp layer
+  (`flightMode="hold"`) loads nothing and fades out; the underlay drops to offset 1 and
+  the floor to offset 3. Trade-off accepted for now: imagery is ~2x softer mid-flight;
+  the landing is full sharpness. To revert, remove `flightMode="hold"` from the sharp
+  layer in `JourneyView.jsx`.
+- `leafletPatches.js` caches tooltip sizes so labels don't force a layout every frame.
+- Measured in Firefox at 2560 wide: drag and wheel zoom at 144 Hz (worst frame ~19–26 ms);
+  repeat flights mostly 14–35 ms worst frame; first cold trip can still hitch 50–70 ms
+  while imagery downloads (network/decoding, not app code).
+- Measuring tips: Firefox rAF timing hides compositor drops — use `MozAfterPaint`
+  (pref `dom.send_after_paint_to_content`) and in-page synthetic drags; Playwright
+  `mouse.move` every 16 ms caps at ~50 fps and is useless for this.
+- Note: `PERFORMANCE.md` predates the smooth wheel zoom and flight mode; its tile
+  strategy section is otherwise still accurate.
+
+### Possible next steps (not promised)
+- Further tuning of the zoom/magnet constants above.
+- U-Bahn stations as magnets.
+- A lighter glass blur for weaker browsers.

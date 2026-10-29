@@ -35,41 +35,8 @@ function ResumeView({ colors }) {
   };
 
   return (
-    <div
-      style={{
-        border: `1px solid ${colors.border}`,
-        borderRadius: "36px",
-        minHeight: "700px",
-        background: colors.card,
-        padding: "26px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "12px",
-          letterSpacing: "0.16em",
-          textTransform: "uppercase",
-          color: colors.muted,
-          fontWeight: 600,
-        }}
-      >
-        Resume
-      </div>
-
-      <div
-        style={{
-          overflow: "auto",
-          borderRadius: "30px",
-          border: `1px solid ${colors.subtleBorder}`,
-          minHeight: "520px",
-          background: "#fcfcfb",
-          padding: "28px",
-        }}
-      >
-        <div style={pageStyle}>
+    <div style={{ background: "#fcfcfb", padding: "32px 28px" }}>
+      <div style={pageStyle}>
           <div
             style={{
               display: "grid",
@@ -233,7 +200,6 @@ function ResumeView({ colors }) {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }
